@@ -4,10 +4,6 @@
     <Name>Check for Plugin Updates...</Name>
     <CallbackMethod>checkForUpdates</CallbackMethod>
   </MenuItem>
-  <MenuItem id="refreshData">
-    <Name>Refresh Data Now...</Name>
-    <CallbackMethod>refreshData</CallbackMethod>
-  </MenuItem>
   <MenuItem id="updatePlugin">
     <Name>Update Plugin</Name>
     <CallbackMethod>updatePlugin</CallbackMethod>

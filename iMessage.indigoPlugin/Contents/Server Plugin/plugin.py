@@ -165,16 +165,24 @@ class Plugin(indigo.PluginBase):
     def connectsql(self):
         if self.debugextra:
             self.debugLog(u"connectsql() method called.")
+        try:
+            ## update to multiple users
 
-        filename = '/Users/Indigo/Library/Messages/chat.db'
-      #  fd = os.open(filename, os.O_RDONLY)
+            filename = os.path.expanduser('~/Library/Messages/chat.db')
+            if self.debugextra:
+                self.logger.debug(u'ConnectSQL: Filename location for iMsg chat.db equals:'+unicode(filename))
+            #filename = '/Users/Indigo/Library/Messages/chat.db'
+          #  fd = os.open(filename, os.O_RDONLY)
 
-       # self.logger.debug(unicode(fd))
-        #self.connection = sqlite3.connect('/dev/fd/%d' % fd)
-
-        self.connection = sqlite3.connect('/Users/Indigo/Library/Messages/chat.db')
-        if self.debugextra:
-            self.debugLog(u"Connect to Database.")
+           # self.logger.debug(unicode(fd))
+            #self.connection = sqlite3.connect('/dev/fd/%d' % fd)
+            self.connection = sqlite3.connect(filename)
+            if self.debugextra:
+                self.debugLog(u"Connect to Database Successful.")
+        except:
+            self.logger.exception(u'Exception connecting to database....')
+            self.sleep(15)
+            return
 
     def closesql(self):
         if self.debugextra:
