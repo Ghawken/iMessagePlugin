@@ -1,0 +1,13 @@
+<?xml version="1.0"?>
+<Events>
+  <SupportURL></SupportURL>
+    <Event id="commandReceived">
+        <Name>Command Received</Name>
+        <ConfigUI>
+			<Field id="commandCalled" type="textfield" defaultValue="">
+				<Label>Command Received:</Label>
+			</Field>
+		</ConfigUI>
+    </Event>
+</Events>
+

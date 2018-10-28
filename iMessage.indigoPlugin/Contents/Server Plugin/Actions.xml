@@ -1,0 +1,41 @@
+<?xml version="1.0"?>
+<Actions>
+ <Action id="sendMessage">
+        <Name>Send iMsg Message</Name>
+        <CallbackMethod>sendiMsg</CallbackMethod>
+        <ConfigUI>
+            <Field type="label" id="schedule_label">
+                <Label>Select the Buddy Handle to send message to</Label>
+            </Field>
+            <Field type="textfield" id="buddyId">
+                <Label>Buddy Handle:</Label>
+            </Field>
+            <Field type="checkbox" id="lastBuddy">
+                <Label>Use last Buddy Handle message received from?:</Label>
+            </Field>
+            <Field type="textfield" id="message">
+                <Label>Message to Send:</Label>
+            </Field>
+        </ConfigUI>
+    </Action>
+ <Action id="sendFile">
+        <Name>Send iMsg Picture/File</Name>
+        <CallbackMethod>sendiMsgPicture</CallbackMethod>
+        <ConfigUI>
+            <Field type="label" id="schedule_label">
+                <Label>Select the Buddy Handle to send message to</Label>
+            </Field>
+            <Field type="textfield" id="buddyId">
+                <Label>Buddy Handle:</Label>
+            </Field>
+            <Field type="checkbox" id="lastBuddy">
+                <Label>Use last Buddy Handle message received from?:</Label>
+            </Field>
+            <Field type="textfield" id="message">
+                <Label>Path to File:</Label>
+            </Field>
+        </ConfigUI>
+    </Action>
+  
+</Actions>
+
