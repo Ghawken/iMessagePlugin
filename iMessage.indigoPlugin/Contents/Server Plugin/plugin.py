@@ -315,11 +315,12 @@ class Plugin(indigo.PluginBase):
                 if self.checkanswer(messages[0],messages[1],sublist):
                     if self.debugextra:
                         self.logger.debug(u'Confirmation received so parsing message ending.  No trigger check.')
-
                     return
 
         self.triggerCheck('', 'commandReceived', messages[1] )
-
+        self.lastcommand = messages
+        self.lastBuddy = messages[0]
+        return
 #######
     #
     def checkanswer(self, buddyHandle, message, sublist):
