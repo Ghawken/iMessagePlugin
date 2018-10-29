@@ -60,6 +60,8 @@ class Plugin(indigo.PluginBase):
 
         self.lastcommand = ()
         self.lastBuddy =''
+        self.awaitingConfirmation = []    # buddy handle within here if waiting a reply yes or no
+#  'buddy', 'AGtorun', 'timestamp', 'iMsgConfirmed'
 
         self.allowedBuddies = self.pluginPrefs.get('allowedBuddies','')
         self.prefServerTimeout = int(self.pluginPrefs.get('configMenuServerTimeout', "15"))
@@ -151,6 +153,8 @@ class Plugin(indigo.PluginBase):
                 messages = self.sql_fetchmessages()
                 if len(messages)>0:
                     self.parsemessages(messages)
+                if len(self.awaitingConfirmation)>0:
+                    self.checkTimeout()
                 if x>4:
                     x=0
                     self.lastcommand = ''
@@ -259,6 +263,21 @@ class Plugin(indigo.PluginBase):
 # Parse Messages
 ########
 
+    def checkTimeout(self):
+        if self.debugextra:
+            self.debugLog(u"checkTimeout method called.")
+        for sublist in self.awaitingConfirmation:
+            if t.time() > int(sublist[2]):
+                self.logger.debug(u'Timeout for '+unicode(sublist)+' occured.  Removing and sending timeout msg')
+                self.as_sendmessage(sublist[0],'Timeout waiting for reply')
+                self.awaitingConfirmation = [ subl for subl in self.awaitingConfirmation if subl[0]!=sublist[0] ]
+                if self.debugextra:
+                    self.logger.debug(u'self.awaitingConfirmation modified now equals:' + unicode(self.awaitingConfirmation))
+                #make new nested list removing the most recent buddy handle
+                #  'buddy', 'AGtorun', 'timestamp', 'iMsgConfirmed'
+        return
+
+
     def parsemessages(self, messages):
         if self.debugextra:
             self.debugLog(u"parse messages() method called.")
@@ -286,9 +305,54 @@ class Plugin(indigo.PluginBase):
         if self.debugextra:
             self.logger.debug( u'self.lastcommand : '+ unicode(self.lastcommand )+ ' & message =:' + unicode(messages))
 
-        self.triggerCheck('', 'commandReceived', messages[1] )
         self.lastcommand = messages
         self.lastBuddy = messages[0]
+
+        for sublist in self.awaitingConfirmation:
+            if sublist[0] == messages[0]:
+                # Buddle has a outstanding confirmation awaited.
+                # check against valid replies
+                if self.checkanswer(messages[0],messages[1],sublist):
+                    if self.debugextra:
+                        self.logger.debug(u'Confirmation received so parsing message ending.  No trigger check.')
+
+                    return
+
+        self.triggerCheck('', 'commandReceived', messages[1] )
+
+#######
+    #
+    def checkanswer(self, buddyHandle, message, sublist):
+        if self.debugextra:
+            self.debugLog(u"checkanswer() method called.")
+
+        valid = {"yes": True, "y": True, "ye": True, 'yeah':True, 'ok':True,  "no": False, "n": False, 'nope':False, 'never':False}
+
+        if message.lower() in valid:
+            if valid[message.lower()]:
+                # if True run actions
+                if self.debugextra:
+                    self.debugLog(u"checkanswer() Valid Reply Found Calling Action Group and sending reply.")
+                indigo.actionGroup.execute(int(sublist[1]))
+                self.logger.info(u'iMsg: Postive Answer Received.  Running action group and sending reply.')
+                self.as_sendmessage(sublist[0],sublist[3])
+                self.awaitingConfirmation = [ subl for subl in self.awaitingConfirmation if subl[0]!=buddyHandle ]
+                if self.debugextra:
+                    self.logger.debug(u'self.awaitingConfirmation now equals:' + unicode(self.awaitingConfirmation))
+                #make new nested list removing the most recent buddy handle
+                #  'buddy', 'AGtorun', 'timestamp', 'iMsgConfirmed'
+                return True
+            else:
+                if self.debugextra:
+                    self.debugLog(u"checkanswer() False Reply Found.")
+                self.logger.info(u'iMsg: Negative Answer Received.  No action taken.')
+                self.as_sendmessage(sublist[0], 'Ok.  No action Taken.')
+                self.awaitingConfirmation = [subl for subl in self.awaitingConfirmation if subl[0] != buddyHandle]
+                if self.debugextra:
+                    self.logger.debug(u'self.awaitingConfirmation now equals:' + unicode(self.awaitingConfirmation))
+                return True
+
+        return False
 
 #######
 
@@ -401,6 +465,52 @@ class Plugin(indigo.PluginBase):
 ##########
 #           Action Groups
 ##########
+    def sendiMsgQuestion(self, action):
+        if self.debugextra:
+            self.debugLog(u"sendImsgQuestion() method called.")
+        theMessage = self.substitute(action.props.get("message", ""))
+        buddyHandle = action.props.get('buddyId','')
+        lastbuddy = action.props.get('lastBuddy', False)
+        timeout = action.props.get('timeout',120)
+        confirmationmsg = self.substitute(action.props.get('confirmedimsg',''))
+        AGtoRun = action.props.get('actiongroup','')
+        expiredtime = t.time() + int(timeout)
+
+        if lastbuddy:
+            buddyHandle = str(self.lastBuddy)
+
+        if self.debugextra:
+            self.debugLog(u"sendImsgQuestion() buddyHandle:" + unicode(buddyHandle) + u' and theMessage:' + unicode(
+                theMessage) + u' and use lastBuddy:' + unicode(lastbuddy))
+        if buddyHandle == '':
+            self.logger.debug(u'Message sending aborted as buddyHandle is blank')
+            self.logger.debug(u'If using LastBuddy need to send message before this is filled')
+            return
+
+
+        try:
+            #  'buddy', 'AGtorun', 'timestamp', 'iMsgConfirmed'
+            add = [ buddyHandle, AGtoRun, expiredtime, confirmationmsg ]
+            buddyalreadywaitingconfirmation = False
+            for sublist in self.awaitingConfirmation:
+                if sublist[0] == buddyHandle:
+                    self.logger.debug(u'buddyhandle already awaiting confirmation - End. Dont ask new Question')
+                    if self.debugextra:
+                        self.logger.debug(u'self.awaitingConfirmation equals:' + unicode(self.awaitingConfirmation))
+                    buddyalreadywaitingconfirmation= True
+                    return  #
+
+            self.as_sendmessage(buddyHandle, theMessage)
+            if buddyalreadywaitingconfirmation == False:  # check not already waiting - can ask two questions same time..
+                self.awaitingConfirmation.append(add)  # if not in there add
+            if self.debugextra:
+                self.logger.debug(u'self.awaitingConfirmation now equals:'+unicode(self.awaitingConfirmation))
+
+
+        except:
+            self.logger.exception(u'Exception in SendImsgQuestion')
+        return
+
 
     def sendiMsg(self, action):
         if self.debugextra:
@@ -493,7 +603,7 @@ class Plugin(indigo.PluginBase):
         try:
             for triggerId, trigger in sorted(self.triggers.iteritems()):
                 if self.debugtriggers:
-                    self.logger.debug("Checking Trigger %s (%s), Type: %s,  and event : %s" % (trigger.name, trigger.id, trigger.pluginTypeId,  triggertype))
+                    self.logger.debug("Checking Trigger:  %s (%s), Type: %s,  and event : %s" % (trigger.name, trigger.id, trigger.pluginTypeId,  triggertype))
                 #self.logger.error(unicode(trigger))
                 if trigger.pluginTypeId == "commandReceived" and triggertype =='commandReceived':
                     if self.debugtriggers:
@@ -502,6 +612,8 @@ class Plugin(indigo.PluginBase):
                         if self.debugtriggers:
                             self.logger.debug("===== Executing commandReceived Trigger %s (%d)" % (trigger.name, trigger.id))
                         indigo.trigger.execute(trigger)
+
+
         except:
             self.logger.exception(u'Exception within Trigger Check')
             return

@@ -36,6 +36,38 @@
             </Field>
         </ConfigUI>
     </Action>
-  
+   <Action id="sendQuestion">
+        <Name>Send iMsg Question</Name>
+        <CallbackMethod>sendiMsgQuestion</CallbackMethod>
+        <ConfigUI>
+            <Field type="label" id="schedule_label">
+                <Label>Select the Buddy Handle to send message to</Label>
+            </Field>
+            <Field type="textfield" id="buddyId">
+                <Label>Buddy Handle:</Label>
+            </Field>
+            <Field type="checkbox" id="lastBuddy">
+                <Label>Use last Buddy Handle message received from?:</Label>
+            </Field>
+            <Field type="textfield" id="message">
+                <Label>Message to Send:</Label>
+            </Field>
+             <Field type="label" id="timeout_label">
+                 <Label>Select the Timeout to wait for reply in Seconds</Label>
+            </Field>
+            <Field type="textfield" id="timeout">
+                <Label>Timeout (seconds)</Label>
+            </Field>
+            <Field type="menu" id="actiongroup">
+                <Label>Action Group to Run:</Label>
+                <List class="indigo.actionGroups" filter=""/>
+            </Field>
+
+            <Field type="textfield" id="confirmedimsg">
+                <Label>Confirmation imsg to send:</Label>
+            </Field>
+
+        </ConfigUI>
+    </Action>
 </Actions>
 

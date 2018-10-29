@@ -40,16 +40,21 @@ Alarm on
 
 ## Two current actions
 
-### Send Imsg and send iMsgFile
+### Send Imsg 
 
 Allow to send imsg text to any buddy you know
 Tick box - to send reply to last buddy received message from enabling ongoing discussion
 Allows variable and device state substitution
 
-send iMsgFile
+### Send iMsgFile
 - sends file/image/animated gif to buddy 
 (again has tickbox for last buddy)
 
+### Ask iMsg QUestion
+ Sends question to Buddy - waits the timeout period for response
+ If timeout sends a timeout reply
+ If confirmation received - then runs the specified action group
+ Send specified reply (%%V:112123%%) substitution allowed
 
 #todo
 
