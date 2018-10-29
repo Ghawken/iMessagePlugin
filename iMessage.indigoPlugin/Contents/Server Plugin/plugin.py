@@ -317,7 +317,7 @@ class Plugin(indigo.PluginBase):
                         self.logger.debug(u'Confirmation received so parsing message ending.  No trigger check.')
                     return
 
-        self.triggerCheck('', 'commandReceived', messages[1] )
+        self.triggerCheck('', 'commandReceived', messages[1].lower() )
         self.lastcommand = messages
         self.lastBuddy = messages[0]
         return
