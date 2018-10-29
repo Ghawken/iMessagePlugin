@@ -1,17 +1,25 @@
 # Indigo iMessage Plugin
 
-Parse and send iMsg
-Works with Mojave
+![](https://github.com/Ghawken/iMessagePlugin/blob/master/DocumentPics/icon.png?raw=true)
+
+What it can do:
+
+Parse and send iMessages from within Indigo
+Send Animated GIFs/pdf files etc from within Indigo
+
+Works with Mojave, untested on below - but shouldn't be issue
+Indigo 7.1 and above
+
 Beta currently
-Will need to change System Permissions to access imsg database file
+
+For Mojave will need to change System Permissions to access imsg database file
 
 ## Basics:
 
 Mojave tested
 Indigo 7.2
-Signed into Messages/iMsg on Mac with ideally separate indigo account
-Will very likely need to give Indigo and IndigoPluginHost.app and IndigoServer.app
-Full Disk Access in the Security and Privacy settings
+Need to be signed into Messages/iMsg on Indigo Mac with ideally separate indigo account
+Will very likely need to give Indigo and IndigoPluginHost.app and IndigoServer.app Full Disk Access in the Security and Privacy settings
 
 ![](https://github.com/Ghawken/iMessagePlugin/blob/master/DocumentPics/SecurityScreen.png?raw=true)
 
