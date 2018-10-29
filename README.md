@@ -75,12 +75,8 @@ Allows variable and device state substitution
  If confirmation received - then runs the specified action group
  Send specified reply (%%V:112123%%) substitution allowed
 
-#todo
 
-- Have some logic triggers 
-Yes / No and returns a condition response - enabling you to ask questions
-'Do you want the Gate opened?'  etc and waits for affirmative before triggering.
-Still thinking this through
+
 
 
 
