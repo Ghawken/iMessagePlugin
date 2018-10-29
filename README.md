@@ -83,6 +83,17 @@ Allows variable and device state substitution
  If confirmation received - then runs the specified action group
  Send specified reply (%%V:112123%%) substitution allowed
 
+## Additional
+
+Messages accept indigo substitution for both variables and devices.
+
+So can send message:
+'Glenn is located %%d:1490780461:address%% and has about %%d:1490780461:homeTimeText%% to travel to get home'
+
+with Number referring to FindFriends Device:
+Indigo will substitute both the address and the travel time in these places.
+
+
 
 
 
