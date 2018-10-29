@@ -9,10 +9,26 @@ Will need to change System Permissions to access imsg database file
 
 Mojave tested
 Indigo 7.2
-Signed into iMsg with ideally separate indigo account
+Signed into Messages/iMsg on Mac with ideally separate indigo account
 Will very likely need to give Indigo and IndigoPluginHost.app and IndigoServer.app
 Full Disk Access in the Security and Privacy settings
-(sorry - don't believe any way around this)
+
+![](https://github.com/Ghawken/iMessagePlugin/blob/master/DocumentPics/SecurityScreen.png?raw=true)
+
+
+(sorry - don't believe any way around this - and probably needed for other plugins)
+
+See here:
+https://www.macworld.com/article/3311982/macs/the-difference-between-accessibility-and-full-disk-access.html
+
+
+Install
+
+Go to plugin Config screen to set allowed Buddies...
+Any questions turn debug logging on and check 3 checkboxes - should supply useful information
+(including Buddy Handles as sometimes email sometimes phone numbers.)
+
+![](https://github.com/Ghawken/iMessagePlugin/blob/master/DocumentPics/PluginConfigScreen.png?raw=true)
 
 ## So far
 
@@ -50,7 +66,10 @@ Allows variable and device state substitution
 - sends file/image/animated gif to buddy 
 (again has tickbox for last buddy)
 
-### Ask iMsg QUestion
+### Ask iMsg Question
+![](https://github.com/Ghawken/iMessagePlugin/blob/master/DocumentPics/AskiMsgQuestion.png?raw=true)
+
+
  Sends question to Buddy - waits the timeout period for response
  If timeout sends a timeout reply
  If confirmation received - then runs the specified action group
