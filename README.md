@@ -30,62 +30,96 @@ See here:
 https://www.macworld.com/article/3311982/macs/the-difference-between-accessibility-and-full-disk-access.html
 
 
-Install
+## Installation
 
+Download latest release and enable
 Go to plugin Config screen to set allowed Buddies...
-Any questions turn debug logging on and check 3 checkboxes - should supply useful information
+
+Any issues turn debug logging on and check 3 checkboxes - should supply useful information
 (including Buddy Handles as sometimes email sometimes phone numbers.)
 
 ![](https://github.com/Ghawken/iMessagePlugin/blob/master/DocumentPics/PluginConfigScreen.png?raw=true)
 
-## So far
+## Works
 
-Connects to chat.db via sql and parse messages received
+Connects to iMessage chat.db via sql and parse messages received via regular simple, read-only SQL command
+At first run will backup the iMsg database to Users/Documents file - just in case... (haven't had any issues)
 Checks every few seconds - so far no problems in my testing
-Need to set allowed Buddies in Plugin Config
-No devices needed.
+Need to set allowed Buddies in Plugin Config otherwise any received iMsg will be ignored
+No Indigo devices needed - works solely through triggers and action 
 
 ## Setup Commands Recognised
 
 Enables you to recognise any iMsg received from Buddy as something to act on
 No formatting of message
-Just simple whole text recognisation
-Felt best to use Indigo itself for actions with Triggers
+Just simple whole text 
 
-Create Separate Triggers for iMsg Plugin for each command want recognised
+Felt best to use Indigo itself for actions with Triggers being the message itself - means very familiar
 
-Edit the Command Received
-Then can create any indigo action passed on the command recevied.
-eg.
+Create Separate Indigo Triggers for iMsg Plugin for each command want recognised
+
+### Via individual Trigger for each iMessage text wish to action on
+
+
+eg. this an Indigo Trigger
+![](https://github.com/Ghawken/iMessagePlugin/blob/master/DocumentPics/TriggerEg.png?raw=true)
+
+Type of trigger is IMessage Plugin Event, Command Received
+
+Edit the command Received, then standard indigo conditions and actions performed.
+
+Then can create any indigo action passed on the command received, including a iMsg reply to confirm.
+
+eg.  One Indigo Action from same Trigger
+
+![](https://github.com/Ghawken/iMessagePlugin/blob/master/DocumentPics/TriggerAction.png?raw=true)
+
+
+Example Commands.
 All off
 Gate Open
 Lock House
 Alarm on
 
-## Two current actions
+## Three current Plugin Actions
 
 ### Send Imsg 
 
 Allow to send imsg text to any buddy you know
-Tick box - to send reply to last buddy received message from enabling ongoing discussion
+Tick box - to send reply to last buddy received message from enabling ongoing conversation
 Allows variable and device state substitution
+So can send message:
+'Glenn is located %%d:1490780461:address%% and has about %%d:1490780461:homeTimeText%% to travel to get home'
+& clever indigo will fill in the blanks
 
 ### Send iMsgFile
 - sends file/image/animated gif to buddy 
 (again has tickbox for last buddy)
+Allows sending Animated Gifs via BlueIris or other Security plugin.
+Just need path to file location,or %%v:112312%% Variable substition and save to path
+eg.
+The BlueIris lastAnimGif path variable which is updated by BlueIris plugin when AnimatedGif created.
+
 
 ### Ask iMsg Question
 ![](https://github.com/Ghawken/iMessagePlugin/blob/master/DocumentPics/AskiMsgQuestion.png?raw=true)
 
 
- Sends question to Buddy - waits the timeout period for response
+ Sends a question to Buddy - waits the timeout period for a positive or negative response
  If timeout sends a timeout reply
  If confirmation received - then runs the specified action group
- Send specified reply (%%V:112123%%) substitution allowed
+
+Following are valid confirmation replies - anything else will be ignored, OR if matches trigger acted on whilst waiting.
+
+ valid = {"yes": True, "y": True, "ye": True, 'yeah':True, 'ok':True,  "no": False, "n": False, 'nope':False, 'never':False}
+
+Sorry only english currently - but easy to add as many confirmation 'Oui' 'Non' that anyone needs down the track.
+
+Also allows - for specified reply (%%V:112123%%) substitution allowed
 
 ## Additional
 
-Messages accept indigo substitution for both variables and devices.
+### Messages accept indigo substitution for both variables and devices.
 
 So can send message:
 'Glenn is located %%d:1490780461:address%% and has about %%d:1490780461:homeTimeText%% to travel to get home'
@@ -95,18 +129,26 @@ Indigo will substitute both the address and the travel time in these places.
 
 
 
-## Python Script Control (if needed for full flexibility)
+### Python Script Control (if needed for full flexibility)
 
 Via a Python script you can access the Plugin actions to send and reply to Imsgs.
 So can via script create question and send via the following standard message. 
 ```
     imessageID = 'com.GlennNZ.indigoplugin.iMessage'
     imsgPlugin = indigo.server.getPlugin(imessageID)
-    imsgPlugin.executeAction('sendQuestion', props={'message':'The question you wish to ask', 'buddyId':'example@email.com', 'lastBuddy':False, 'timeout':600,'confirmedimsg':'All done.','actiongroup':AGtoRun})
+    imsgPlugin.executeAction('sendQuestion', props={'message':'The question you wish to ask', 'buddyId':'example@email.com', 'lastBuddy':False, 'timeout':600,'confirmedimsg':'All done.','actiongroup':ActionGroupIDtoRunwhenConfirmed})
     return;
 ```
 
-Here is an example script that list devices on, saves this list to a variable and then sends message, via the plugin waiting for confirmation,  before running the confirmation AG to turn off all listed in variable.
+Props to send:
+message: the question to ask
+buddyId: the buddy handle
+lastBuddy: just the last buddy msg received from 
+timeout : timeout in seconds
+confirmedimsg: message if confirmation is received
+actiongroup:  the ID number of the action group to run if confirmed.
+
+Here is an example script that list devices on  (via allowed list, and notallowed list), saves this list to a variable and then sends message listing devices on, via the plugin waits for confirmation,  before running the confirmation AG to turn off all listed in variable.
 
 
 ```
