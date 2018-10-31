@@ -95,15 +95,17 @@ Indigo will substitute both the address and the travel time in these places.
 
 Via a Python script you can access the Plugin actions to send and reply to Imsgs.
 So can via script create question and send via the following standard message. 
-
+```
     imessageID = 'com.GlennNZ.indigoplugin.iMessage'
     imsgPlugin = indigo.server.getPlugin(imessageID)
-    imsgPlugin.executeAction('sendQuestion', props={'message':'The question you wish to ask', 'buddyId':'example@email.com', 'lastBuddy':False, 'timeout':600,'confirmedimsg':replyifsuccess,'actiongroup':AGtoRun})
+    imsgPlugin.executeAction('sendQuestion', props={'message':'The question you wish to ask', 'buddyId':'example@email.com', 'lastBuddy':False, 'timeout':600,'confirmedimsg':'All done.','actiongroup':AGtoRun})
     return;
+```
 
-Here is an example script that list devices on and then sends message 
+Here is an example script that list devices on and then sends message, via the plugin waiting for confirmation before running.
 
-'''
+
+```
 on_name = []
 on_id = []
 
@@ -142,7 +144,7 @@ if numberon > 0 :
     Statement = Question + ListModules + "\n Would you like me to turn them off?"
     AskQuestionGlenn(Statement, 95680424, "They have all been turned off");
     
-'''
+```
 
 
 
