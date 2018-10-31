@@ -93,6 +93,10 @@ So can send message:
 with Number referring to FindFriends Device:
 Indigo will substitute both the address and the travel time in these places.
 
+
+
+## Python Script Control (if needed for full flexibility)
+
 Via a Python script you can access the Plugin actions to send and reply to Imsgs.
 So can via script create question and send via the following standard message. 
 ```
@@ -102,7 +106,7 @@ So can via script create question and send via the following standard message.
     return;
 ```
 
-Here is an example script that list devices on and then sends message, via the plugin waiting for confirmation before running.
+Here is an example script that list devices on, saves this list to a variable and then sends message, via the plugin waiting for confirmation,  before running the confirmation AG to turn off all listed in variable.
 
 
 ```
@@ -146,8 +150,29 @@ if numberon > 0 :
     
 ```
 
+and for completeness here is the Action Group that is called when above is run
+```
+onid = indigo.variables[1410863016] # "MsgOnDevices"
+
+onidstring = onid.value
+onidstring = onidstring.replace("[","")
+onidstring = onidstring.replace("]","")  # Covert indigo string variable back to list
+onidstring = onidstring.replace(" ","")
+
+if len(onidstring) > 1:
+    onidlist = onidstring.split(",")
+else:
+    onidlist = onidstring
 
 
+if len(onidlist) >= 1 :
+    indigo.server.log("iMsg: Turning off All Devices ")
+    indigo.server.log(unicode(onidstring))
+    for i in range(len(onidlist)):
+	    indigo.device.turnOff(int(onidlist[i]))
+elif len(onidlist) < 1 :
+    indigo.server.log("iMsg: No Devices On ")  
+```
 
 
 

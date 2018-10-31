@@ -9,13 +9,13 @@ First draft
 import logging
 import datetime
 import time as t
-import urllib2
 import os
 import sys
 import shutil
 from ghpu import GitHubPluginUpdater
 import sqlite3
 import applescript
+
 
 try:
     import indigo
@@ -171,6 +171,17 @@ class Plugin(indigo.PluginBase):
             self.debugLog(u"connectsql() method called.")
         try:
             ## update to multiple users
+            backupfilename = os.path.expanduser('~/Documents/Indigo-iMsgBackup/')
+            diriMsgdb = os.path.expanduser('~/Library/Messages/')
+            if os.path.exists(backupfilename)==False:
+                os.mkdir(backupfilename)
+                self.logger.info(u'Backing up Current iMsg Database Directory to :' + unicode(backupfilename))
+                src_files = os.listdir(diriMsgdb)
+                for file_name in src_files:
+                    full_filename = os.path.join(diriMsgdb,file_name)
+                    if (os.path.isfile(full_filename)):
+                        shutil.copy(full_filename, backupfilename)
+                        self.logger.debug(u'Backed up file:'+full_filename)
 
             filename = os.path.expanduser('~/Library/Messages/chat.db')
             if self.debugextra:
