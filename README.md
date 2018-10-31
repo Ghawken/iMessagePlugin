@@ -93,6 +93,57 @@ So can send message:
 with Number referring to FindFriends Device:
 Indigo will substitute both the address and the travel time in these places.
 
+Via a Python script you can access the Plugin actions to send and reply to Imsgs.
+So can via script create question and send via the following standard message. 
+
+    imessageID = 'com.GlennNZ.indigoplugin.iMessage'
+    imsgPlugin = indigo.server.getPlugin(imessageID)
+    imsgPlugin.executeAction('sendQuestion', props={'message':'The question you wish to ask', 'buddyId':'example@email.com', 'lastBuddy':False, 'timeout':600,'confirmedimsg':replyifsuccess,'actiongroup':AGtoRun})
+    return;
+
+Here is an example script that list devices on and then sends message 
+
+'''
+on_name = []
+on_id = []
+
+def AskQuestionGlenn(question, AGtoRun, replyifsuccess) :
+    
+    imessageID = 'com.GlennNZ.indigoplugin.iMessage'
+    imsgPlugin = indigo.server.getPlugin(imessageID)
+    imsgPlugin.executeAction('sendQuestion', props={'message':question, 'buddyId':'example@.com', 'lastBuddy':False, 'timeout':600,'confirmedimsg':replyifsuccess,'actiongroup':AGtoRun})
+    return;
+
+def CheckModulesRunning() :
+    acceptable_modules = ["Smart Switch (DSC24)","RGBW LED Bulb (ZW098)","Smart Energy Switch (DSC24-2E)","Dimmer Switch (FGD211)","Smart Energy Illuminator (DSC08101)",                     "Relay Power Switch","Smart Energy Switch (DSC06106)", "Double Relay Switch (FGS221)", "Hue Bulb (Original, Downlight, Spotlight, LightStrip Plus)" ]
+
+    notallowedid = [1049034630, 879903489, 1732408457, 1618015973,1595081762,660021281,1509636685,90390894,1047676499,614856779,1373207126,1332040796,1797065670]
+
+    dev_list = indigo.devices.iter()
+    for x in dev_list:
+        if hasattr(x, "displayStateValRaw") and x.displayStateValRaw not in ["off", 0] and x.model in acceptable_modules and x.id not in notallowedid :
+            on_name.append(x.name)
+            on_id.append(x.id)
+    return;
+
+CheckModulesRunning();
+
+numberon = len(on_id)
+
+if numberon == 0 :
+    indigo.server.log("Checking Running devices - None found on.")
+
+if numberon > 0 :
+    indigo.server.log("Checking Running devices - Modules running - iMsg sent")
+    Question = "Attention\n I have noticed that you are both away and \nThe following lights/devices are on \n"
+    ListModules = " , ".join(on_name)
+    idsoff = indigo.variables[1410863016] # "MsgOnDevices"
+    indigo.variable.updateValue(idsoff, unicode(on_id))
+    Statement = Question + ListModules + "\n Would you like me to turn them off?"
+    AskQuestionGlenn(Statement, 95680424, "They have all been turned off");
+    
+'''
+
 
 
 

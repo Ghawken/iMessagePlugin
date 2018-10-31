@@ -14,7 +14,15 @@
                 <Label>Use last Buddy Handle message received from?:</Label>
             </Field>
             <Field type="textfield" id="message">
-                <Label>Message to Send:</Label>
+                <Label>
+
+
+
+                                                                                                                            Message to Send:
+
+
+
+                </Label>
             </Field>
         </ConfigUI>
     </Action>
@@ -50,7 +58,14 @@
                 <Label>Use last Buddy Handle message received from?:</Label>
             </Field>
             <Field type="textfield" id="message">
-                <Label>Message to Send:</Label>
+                <Label>Message to Send:
+
+
+
+
+
+
+                </Label>
             </Field>
              <Field type="label" id="timeout_label">
                  <Label>Select the Timeout to wait for reply in Seconds</Label>
