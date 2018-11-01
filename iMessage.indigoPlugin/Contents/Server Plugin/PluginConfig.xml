@@ -18,7 +18,17 @@
   <Field id="allowedBuddies" type="textfield" defaultValue="" tooltip="Allowed buddies to communicate with service [comma separated]">
     <Label>Buddy List:</Label>
   </Field>
+    <Field id="spaced2" type="label" fontSize="small" fontColor="black">
+    <Label>
+        If this is enabled Indigo will Highlight in Log the Buddy Handle Msg received from
+        Use this temporality if any issues working out correct Buddy Handle
+    </Label>
+  </Field>
 
+    <Field id="showBuddies" type="checkbox" tooltip="Highlight Buddy Handles.">
+    <Label>Show Buddy Handle in Log:</Label>
+    <Description>Enable/Disable</Description>
+  </Field>
   <Field id="space1" type="label" fontColor="black">
     <Label>Check for Updates:</Label>
   </Field>
@@ -31,10 +41,10 @@
     <Label>Update Check Interval:(hours)</Label>
   </Field>
 
-  <Field id="configUpdaterForceUpdate" type="checkbox" tooltip="Will automatic install newer version at check.">
-    <Label> Automatically install newer version at time of check</Label>
-    <Description>Enable/Disable</Description>
-  </Field>
+    <Field id="openStore" type="checkbox" tooltip='Enabling with open Plugin Store for download'>
+        <Label>Automatically Open Plugin Store if an update is available.</Label>
+        <Description>Enable/Disable</Description>
+    </Field>
  <Field id="sep9" type="separator"/>
 
 

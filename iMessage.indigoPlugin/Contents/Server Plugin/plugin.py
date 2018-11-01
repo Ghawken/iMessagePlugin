@@ -55,8 +55,10 @@ class Plugin(indigo.PluginBase):
         self.logger.debug(u"logLevel = " + str(self.logLevel))
         self.triggers = {}
 
+        self.showBuddies = self.pluginPrefs.get('showBuddies', False)
         self.debugextra = self.pluginPrefs.get('debugextra', False)
         self.debugtriggers = self.pluginPrefs.get('debugtriggers', False)
+        self.openStore = self.pluginPrefs.get('openStore', False)
 
         self.lastcommand = ()
         self.lastBuddy =''
@@ -98,7 +100,7 @@ class Plugin(indigo.PluginBase):
                 self.logLevel = logging.INFO
 
             self.indigo_log_handler.setLevel(self.logLevel)
-
+            self.showBuddies = valuesDict.get('showBuddies', False)
             self.allowedBuddies = valuesDict.get('allowedBuddies', '')
             self.openStore = valuesDict.get('openStore', False)
             self.logger.debug(u"logLevel = " + str(self.logLevel))
@@ -136,7 +138,7 @@ class Plugin(indigo.PluginBase):
         self.updater.update()
 
     def pluginstoreUpdate(self):
-        iurl = 'http://www.indigodomo.com/pluginstore/'
+        iurl = 'https://github.com/Ghawken/iMessagePlugin/releases/'
         self.browserOpen(iurl)
 
     #####
@@ -302,6 +304,11 @@ class Plugin(indigo.PluginBase):
         if self.allowedBuddies is None or self.allowedBuddies=='':
             self.logger.info(u'Message Received but Allowed Buddies nil please set in Config')
             return
+
+        if self.showBuddies:
+            self.logger.error(u'iMessage Received from Buddy:  Buddy Handle Below:')
+            self.logger.error(unicode(messages[0]))
+
 
         if messages[0] in self.allowedBuddies:
             if self.debugextra:

@@ -4,10 +4,10 @@
     <Name>Check for Plugin Updates...</Name>
     <CallbackMethod>checkForUpdates</CallbackMethod>
   </MenuItem>
-  <MenuItem id="updatePlugin">
-    <Name>Update Plugin</Name>
-    <CallbackMethod>updatePlugin</CallbackMethod>
-  </MenuItem>
+      <MenuItem id="pluginstoreUpdate">
+        <Name>Open PluginStore for Download</Name>
+        <CallbackMethod>pluginstoreUpdate</CallbackMethod>
+    </MenuItem>
   <MenuItem id="toggleDebug">
     <Name>Toggle Debugging</Name>
     <CallbackMethod>toggleDebugEnabled</CallbackMethod>

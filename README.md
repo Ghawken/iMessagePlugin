@@ -33,6 +33,9 @@ https://www.macworld.com/article/3311982/macs/the-difference-between-accessibili
 
 - Download latest release and enable
 - Go to plugin Config screen to set allowed Buddies...
+
+- If hard to find out Buddy Handle (sometimes email, sometimes phone) enable Config checkbox 'Show Buddy Handle in Log'.  Send indigo Mac and iMsg if all is functioning correctly, the Plugin will highlight for you the correct Buddy Handle to use in the Plugin Config and the send iMessage boxes as required.
+
 - Any issues turn debug logging on and check 3 checkboxes - should supply useful information
 (including Buddy Handles as sometimes email sometimes phone numbers.)
 
