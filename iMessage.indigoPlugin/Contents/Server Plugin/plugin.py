@@ -60,9 +60,9 @@ class Plugin(indigo.PluginBase):
         self.debugtriggers = self.pluginPrefs.get('debugtriggers', False)
         self.openStore = self.pluginPrefs.get('openStore', False)
 
-        self.resetLastCommand = t.time()
+        self.resetLastCommand = t.time()+60
 
-        self.lastCommandsent = []
+        self.lastCommandsent = dict()
         self.lastBuddy =''
         self.awaitingConfirmation = []    # buddy handle within here if waiting a reply yes or no
 #  'buddy', 'AGtorun', 'timestamp', 'iMsgConfirmed'
@@ -171,9 +171,9 @@ class Plugin(indigo.PluginBase):
 
         try:
             self.connectsql()
-            x =0
+            #x =0
             while True:
-                x=x+1
+                #x=x+1
                 self.sleep(5)
 
                 messages = self.sql_fetchmessages()
@@ -181,12 +181,12 @@ class Plugin(indigo.PluginBase):
                     self.parsemessages(messages)
                 if len(self.awaitingConfirmation)>0:
                     self.checkTimeout()
-                if x>12:
-
-                    if self.debugextra:
-                        self.logger.debug(unicode(x)+u':  Within RunConcurrent Thread: Resetting self.lastcommandsent')
-                    self.lastCommandsent = []
-                    x = 0
+                if self.lastCommandsent==False:
+                    if t.time() > self.resetLastCommand:
+                        if self.debugextra:
+                            self.logger.debug(u'Within RunConcurrent Thread: Resetting self.lastcommandsent')
+                        self.lastCommandsent.clear()
+                        self.resetLastCommand = t.time()+120
 
         except self.StopThread:
             self.debugLog(u'Restarting/or error. Stopping  thread.')
@@ -247,7 +247,7 @@ class Plugin(indigo.PluginBase):
              FROM message INNER JOIN handle 
              ON message.handle_id = handle.ROWID 
              WHERE is_from_me=0 AND 
-             datetime(message.date/1000000000 + strftime("%s", "2001-01-01") ,"unixepoch","localtime") >= datetime('now','-5 seconds', 'localtime')
+             datetime(message.date/1000000000 + strftime("%s", "2001-01-01") ,"unixepoch","localtime") >= datetime('now','-10 seconds', 'localtime')
              ORDER BY message.date ASC;      
            '''
 
@@ -264,15 +264,25 @@ class Plugin(indigo.PluginBase):
         #     '''
         cursor.execute(sqlcommand)
         result = cursor.fetchall()
-        if len(result)>0:
-            ## just return very last message received
-            ## if no messages return all
+
+
+        if not result:  # list is empty return empty dict
+            return dict()
+        else:
             if self.debugextra:
-                self.logger.debug(unicode(result))
-            # return whole lists
-            return result
-            #return result[-1]
-        return result
+                self.logger.debug(u'sql_fetchmessages: Not empty return:' + unicode(result))
+            newmessages = [item for sublist in result for item in sublist]
+            if self.debugextra:
+                self.logger.debug(u'Flatten Messages first:')
+                self.logger.debug(unicode(newmessages))
+                self.logger.debug(u'Then convert to Dict:')
+            newmessagesdict = dict(zip(*[iter(newmessages)] * 2))
+
+            if self.debugextra:
+                self.logger.debug(unicode('Coverted Dict:'))
+                self.logger.debug(unicode(newmessagesdict))
+            return newmessagesdict
+
 #####
 
 ########
@@ -356,7 +366,6 @@ class Plugin(indigo.PluginBase):
 
         buddiescurrent = ()
 
-
         if self.debugextra:
             self.debugLog(u"parse messages() method called.")
             self.logger.debug(u'Message Received: Message Info:'+unicode(messages))
@@ -370,48 +379,40 @@ class Plugin(indigo.PluginBase):
             self.logger.info(u'Message Received but Allowed Buddies Empty. Please set in Plugin Config')
             return
 
-        for sublist in messages:
+        for key,val in messages.items():
             if self.debugextra:
-                self.logger.debug(u'Checking messages:  Received: Buddy :'+unicode(sublist[0])+ ' Received Message:'+unicode(sublist[1]))
-            if sublist[0] not in buddiescurrent:
-                buddiescurrent = buddiescurrent + (sublist[0],)
+                self.logger.debug(u'Checking messages:  Received: Buddy :'+unicode(key)+ ' Received Message:'+unicode(val))
+            if key not in buddiescurrent:
+                buddiescurrent = buddiescurrent + (key,)
                 if self.debugextra:
                     self.logger.debug(u'Buddies Current now equals:'+unicode(buddiescurrent))
-
-        # Check for duplicate messages - use a set
-        b_set = set(map(tuple,messages))
-        messages = map(list,b_set)
-        if self.debugextra:
-            self.logger.debug(u'Deleted Duplicate Messages : New messages now equals:'+unicode(messages))
-        # just uses current ....
-        # should go through each buddy and update..
 
         if self.showBuddies:
             self.logger.error(u'iMessage Received from Buddy(s):  Buddy(s) Handle Below:')
             for buddies in buddiescurrent:
                 self.logger.error(unicode(buddies))
 
-        for i, v  in enumerate(messages):
-            if v[0] in self.allowedBuddies:
+        for key, val in messages.items():
+            if key in self.allowedBuddies:
                 if self.debugextra:
                     self.logger.debug(u'Passed against allowed Buddies: ' + unicode(messages))
                     self.logger.debug(u'Allowed Buddies Equal:'+unicode(self.allowedBuddies))
-                    self.logger.debug(u'Received Buddy equals:'+unicode(v[0]))
+                    self.logger.debug(u'Received Buddy equals:'+unicode(key))
             else:
                 if self.debugextra:
-                    self.logger.debug(u'Message Received - but buddyhandle not allowed; Handled received equals:'+unicode(v[0]))
+                    self.logger.debug(u'Message Received - but buddyhandle not allowed; Handled received equals:'+unicode(key))
                     self.logger.debug(u'Allowed Buddies Equal:' + unicode(self.allowedBuddies))
                     self.logger.debug(u'Deleting this message, continuing with others parsing')
-                messages.remove(messages[i])
+                messages.pop(key, None)
 
         #self.lastcommand = messages
         #self.lastBuddy = messages[0]
-        for i,v in enumerate(messages):
+        for key,value in messages.items():
             for sublist in self.awaitingConfirmation:
-                if sublist[0] == v[0]:
+                if sublist[0] == key:
                 # Buddle has a outstanding confirmation awaited.
                 # check against valid replies
-                    if self.checkanswer(v[0],v[1],sublist):
+                    if self.checkanswer(key,value,sublist):
                         if self.debugextra:
                             self.logger.debug(u'Confirmation received so deleting this message, ending.  No trigger check on this message.')
                             self.logger.debug(u'messages equals:')+unicode(messages)
@@ -421,44 +422,28 @@ class Plugin(indigo.PluginBase):
         if self.debugextra:
             self.logger.debug(u'SELF.lastcommand PRIOR equals:' + unicode(self.lastCommandsent))
 
-        for i,v in enumerate(messages):
+        for keymsg,valmsg in messages.items():
             # now check last message and don't act if the same
             # check if list nested or not
             if self.lastCommandsent:  # check not empty list
-                if any( isinstance(i, list) for i in self.lastCommandsent):  #if true nested list
-                    for sublist in self.lastCommandsent:
-                        if self.debugextra:
-                            self.logger.debug(unicode(sublist))
-                            self.logger.debug(u'sublist[0]:'+sublist[0]+u' v[0]:'+unicode(v[0]))
-                        if sublist[0]==v[0]:
-                            if self.debugextra:
-                                self.logger.debug(u'Buddy last command found: Buddy:'+unicode(v[0])+u'and last message:'+unicode(v[1]))
-                            if v[1]==sublist[1]:
-                                if self.debugextra:
-                                    self.logger.debug(u'Same Message found.  This repeated message will be ignored. Message ignored:'+unicode(v[1]))
-                                messages.remove(messages[i])
-                                if self.debugextra:
-                                    self.logger.debug(u'Same Message found.  New Messages equals:'+unicode(messages))
-                else:  # returns false simple list
+                for keylast,vallast in self.lastCommandsent.items():
                     if self.debugextra:
-                        self.logger.debug(u'self.lastCommandSent[0]:' + unicode(self.lastCommandsent[0]) + u' v[0]:' + unicode(v[0]))
-                    if self.lastCommandsent[0] == v[0]:
+                        self.logger.debug(unicode(keylast)+' : '+unicode(vallast))
+                        self.logger.debug(u'LastCommandsent Key:'+unicode(keylast)+u' Messages Key:'+unicode(keymsg))
+                    if keymsg==keylast:
                         if self.debugextra:
-                            self.logger.debug( u'Buddy last command found: Buddy:' + unicode(v[0]) + u'and last message:' + unicode(v[1]))
-                        if v[1] == self.lastCommandsent[1]:
+                            self.logger.debug(u'Buddy last command found: Buddy:'+unicode(keylast)+u'and last message:'+unicode(keymsg))
+                        if valmsg==vallast:
                             if self.debugextra:
-                                self.logger.debug(  u'Same Message found.  This repeated message will be ignored. Message ignored:' + unicode(v[1]))
-                            self.logger.info(u'Same message received:'+unicode(v[1])+u' from same Buddy:'+unicode(v[0]) +u' this duplicate will be ignored.')
-                            messages.remove(messages[i])
+                                self.logger.info(u'Same Message found.  This repeated message will be ignored. Message ignored: '+unicode(valmsg))
+                            messages.pop(keymsg, None)
                             if self.debugextra:
-                                self.logger.debug(u'Same Message found.  New Messages equals:' + unicode(messages))
+                                self.logger.debug(u'Same Message found.  New Messages equals:'+unicode(messages))
         # last message
-        if self.debugextra:
-            self.logger.debug(u'Length messages:'+unicode(len(messages)))
-        if len(messages)>1:
-            self.lastCommandsent = messages
-        elif len(messages)==1:
-            self.lastCommandsent = [item for sublist in messages for item in sublist]
+        for key,val in messages.items():
+            self.lastCommandsent[key]=val
+            if self.debugextra:
+                self.logger.debug(u'Updated lastCommandsent:' + unicode(self.lastCommandsent))
 
         # if only one flatten the nest list as was causing issues
         # need now to deal with nested sometimes, list others - above
@@ -468,10 +453,11 @@ class Plugin(indigo.PluginBase):
         if self.debugextra:
             self.logger.debug(u'self.lastcommand equals:' + unicode(self.lastCommandsent))
 
-        for i,v in enumerate(messages):
-            self.lastBuddy = v[0]
-            self.triggerCheck('', 'commandReceived', v[1].lower() )
-            messages.remove(messages[i])
+        for key,val in messages.items():
+            self.lastBuddy = key
+            self.triggerCheck('', 'commandReceived', val.lower() )
+            self.resetLastCommand = t.time()+120
+            messages.pop(key, None)
             if self.debugextra:
                 self.logger.debug(
                     u'Command Sent received so deleting this message, ending.  No trigger check on this message.')
