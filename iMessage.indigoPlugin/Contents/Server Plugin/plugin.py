@@ -430,7 +430,7 @@ class Plugin(indigo.PluginBase):
             if self.lastCommandsent:  # check not empty list
                 for keylast,vallast in self.lastCommandsent.items():
                     if self.debugextra:
-                        self.logger.debug(unicode(u'checking last commands sent:'+unicode(keylast)+' : '+unicode(vallast))
+                        self.logger.debug(u'Checking last commands sent:'+unicode(keylast)+' : '+unicode(vallast) )
                         self.logger.debug(u'LastCommandsent Key:'+unicode(keylast)+u' Messages Key:'+unicode(keymsg))
                     if keymsg==keylast:
                         if self.debugextra:
