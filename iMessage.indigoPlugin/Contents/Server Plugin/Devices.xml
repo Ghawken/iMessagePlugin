@@ -1,53 +1,5 @@
 <?xml version="1.0"?>
 <Devices>
 
-  <Device type="custom" id="iMessageDevice">
-    <Name>iMessage Command Device</Name>
 
-    <ConfigUI>
-
-   </ConfigUI>
-
-    <States>
-      <State id="deviceIsOnline">
-        <ValueType>Boolean</ValueType>
-        <TriggerLabel>Device online?</TriggerLabel>
-        <ControlPageLabel>Device online?</ControlPageLabel>
-      </State>
-
-        <State id="deviceStatus">
-        <ValueType>String</ValueType>
-        <TriggerLabel>Device Status</TriggerLabel>
-        <ControlPageLabel>Device Status</ControlPageLabel>
-      </State>
-      <State id="deviceLastUpdated">
-        <ValueType>String</ValueType>
-        <TriggerLabel>Device Last Updated</TriggerLabel>
-        <ControlPageLabel>Device Last Updated</ControlPageLabel>
-      </State>
-      <State id="lastmessageReceived">
-        <ValueType>String</ValueType>
-        <TriggerLabel>Last Message Received</TriggerLabel>
-        <ControlPageLabel>Last Message Received</ControlPageLabel>
-      </State>
-      <State id="buddylastMessage">
-        <ValueType>String</ValueType>
-        <TriggerLabel>Buddy Last Message Received</TriggerLabel>
-        <ControlPageLabel>Buddy Last Message Received</ControlPageLabel>
-      </State>
-
-    </States>
-
-    <UiDisplayStateId>deviceStatus</UiDisplayStateId>
-
-
-
-
-<!-- Substitution -->
-
-
-
-
-
-</Device>
 </Devices>

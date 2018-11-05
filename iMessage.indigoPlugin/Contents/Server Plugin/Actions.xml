@@ -7,8 +7,9 @@
             <Field type="label" id="schedule_label">
                 <Label>Select the Buddy Handle to send message to</Label>
             </Field>
-            <Field type="textfield" id="buddyId">
+            <Field type="menu" id="buddyId">
                 <Label>Buddy Handle:</Label>
+                <List class="self" method="buddyListGenerator" dynamicReload="false"/>
             </Field>
             <Field type="checkbox" id="lastBuddy">
                 <Label>Use last Buddy Handle message received from?:</Label>
@@ -33,8 +34,9 @@
             <Field type="label" id="schedule_label">
                 <Label>Select the Buddy Handle to send message to</Label>
             </Field>
-            <Field type="textfield" id="buddyId">
+            <Field type="menu" id="buddyId">
                 <Label>Buddy Handle:</Label>
+                <List class="self" method="buddyListGenerator" dynamicReload="false"/>
             </Field>
             <Field type="checkbox" id="lastBuddy">
                 <Label>Use last Buddy Handle message received from?:</Label>
@@ -51,8 +53,9 @@
             <Field type="label" id="schedule_label">
                 <Label>Select the Buddy Handle to send message to</Label>
             </Field>
-            <Field type="textfield" id="buddyId">
+            <Field type="menu" id="buddyId">
                 <Label>Buddy Handle:</Label>
+                <List class="self" method="buddyListGenerator" dynamicReload="false"/>
             </Field>
             <Field type="checkbox" id="lastBuddy">
                 <Label>Use last Buddy Handle message received from?:</Label>

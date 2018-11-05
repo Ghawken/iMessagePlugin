@@ -60,10 +60,14 @@ class Plugin(indigo.PluginBase):
         self.debugtriggers = self.pluginPrefs.get('debugtriggers', False)
         self.openStore = self.pluginPrefs.get('openStore', False)
 
-        self.lastcommand = ()
+        self.resetLastCommand = t.time()
+
+        self.lastCommandsent = []
         self.lastBuddy =''
         self.awaitingConfirmation = []    # buddy handle within here if waiting a reply yes or no
 #  'buddy', 'AGtorun', 'timestamp', 'iMsgConfirmed'
+
+        self.messages = []
 
         self.allowedBuddies = self.pluginPrefs.get('allowedBuddies','')
         self.prefServerTimeout = int(self.pluginPrefs.get('configMenuServerTimeout', "15"))
@@ -122,6 +126,26 @@ class Plugin(indigo.PluginBase):
         indigo.server.log(u"Stopping device: " + dev.name)
 
     ###
+
+    def buddyListGenerator(self, filter="", valuesDict=None, typeId="", targetId=0):
+        if self.debugextra:
+            self.debugLog(u"buddyListGenerator() method called.")
+        buddyList = []
+        if self.allowedBuddies is not None and self.allowedBuddies !='':
+            myBuddies = self.allowedBuddies.split(',')
+            if len(myBuddies) >0:
+                for buddy in myBuddies:
+                    buddyList.append(tuple((buddy, buddy)))
+                    if self.debugextra:
+                        self.debugLog(u"Adding allowed Buddy:"+unicode(buddy)+u' to list.')
+            else:
+                buddyList = [('option1', 'No Allowed Buddies Setup PluginConfig'),('option2','Please Setup in Plugin Config')]
+        else:
+            buddyList = [('option1', 'No Allowed Buddies Setup PluginConfig'),
+                         ('option2', 'Please Setup in Plugin Config')]
+        if self.debugextra:
+            self.debugLog(u"Full BuddyList equals:"+unicode(buddyList))
+        return buddyList
     ###  Update ghpu Routines.
 
     def checkForUpdates(self):
@@ -157,9 +181,12 @@ class Plugin(indigo.PluginBase):
                     self.parsemessages(messages)
                 if len(self.awaitingConfirmation)>0:
                     self.checkTimeout()
-                if x>4:
-                    x=0
-                    self.lastcommand = ''
+                if x>12:
+
+                    if self.debugextra:
+                        self.logger.debug(unicode(x)+u':  Within RunConcurrent Thread: Resetting self.lastcommandsent')
+                    self.lastCommandsent = []
+                    x = 0
 
         except self.StopThread:
             self.debugLog(u'Restarting/or error. Stopping  thread.')
@@ -214,13 +241,27 @@ class Plugin(indigo.PluginBase):
        # if self.debugextra:
        #     self.debugLog(u"fetch messages() method called.")
         cursor = self.connection.cursor()
+
         sqlcommand = '''
-            SELECT handle.id, message.text 
-              FROM message INNER JOIN handle 
-              ON message.handle_id = handle.ROWID 
-              WHERE is_from_me=0 AND 
-              datetime(message.date/1000000000 + strftime("%s", "2001-01-01") ,"unixepoch","localtime") >= datetime('now','-10 seconds', 'localtime');      
-            '''
+           SELECT handle.id, message.text 
+             FROM message INNER JOIN handle 
+             ON message.handle_id = handle.ROWID 
+             WHERE is_from_me=0 AND 
+             datetime(message.date/1000000000 + strftime("%s", "2001-01-01") ,"unixepoch","localtime") >= datetime('now','-5 seconds', 'localtime')
+             ORDER BY message.date ASC;      
+           '''
+
+        # ## Still doesn't help with group chat
+        # sqlcommand = '''
+        #     SELECT handle.id, message.text , chat.guid
+        #       FROM message
+        #       INNER JOIN handle
+        #         ON message.handle_id = handle.ROWID
+        #       INNER JOIN chat
+        #         ON handle.ROWID = chat.ROWID
+        #       WHERE is_from_me=0 AND
+        #       datetime(message.date/1000000000 + strftime("%s", "2001-01-01") ,"unixepoch","localtime") >= datetime('now','-10 seconds', 'localtime');
+        #     '''
         cursor.execute(sqlcommand)
         result = cursor.fetchall()
         if len(result)>0:
@@ -228,7 +269,9 @@ class Plugin(indigo.PluginBase):
             ## if no messages return all
             if self.debugextra:
                 self.logger.debug(unicode(result))
-            return result[-1]
+            # return whole lists
+            return result
+            #return result[-1]
         return result
 #####
 
@@ -252,8 +295,26 @@ class Plugin(indigo.PluginBase):
         my_ascript_from_string = applescript.AppleScript(source=ascript_string)
         reply = my_ascript_from_string.run()
         if self.debugextra:
-            self.logger.debug(unicode(reply))
+            self.logger.debug(u'AppleScript Reply:'+unicode(reply))
 
+    def as_sendgroupmessage(self, imsgUser, imsgMessage):
+        if self.debugextra:
+            self.debugLog(u"as_sendGroupmessage() method called.")
+            self.logger.debug(u'Sending GroupiMsg:' + unicode(imsgMessage) + u' to GroupID:' + unicode(imsgUser))
+
+        ascript_string = '''
+                set sendThis to "''' + imsgMessage + '''"  
+                set myid to "''' + imsgUser + '''" 
+                tell application "Messages"
+        	        set myid to get id of first service
+        	        set theBuddy to a reference to text chat id myid 
+        	        send sendThis to theBuddy
+                end tell
+                '''
+        my_ascript_from_string = applescript.AppleScript(source=ascript_string)
+        reply = my_ascript_from_string.run()
+        if self.debugextra:
+            self.logger.debug(unicode(reply))
 
     def as_sendpicture(self, imsgUser, imsgFile):
         if self.debugextra:
@@ -292,52 +353,131 @@ class Plugin(indigo.PluginBase):
 
 
     def parsemessages(self, messages):
+
+        buddiescurrent = ()
+
+
         if self.debugextra:
             self.debugLog(u"parse messages() method called.")
             self.logger.debug(u'Message Received: Message Info:'+unicode(messages))
 
-        if self.lastcommand == messages:
-            if self.debugextra:
-                self.debugLog(u"Checked lastcommand SAME MESSAGE parsing aborted.")
-            return
+        # if self.lastcommand == messages:
+        #     if self.debugextra:
+        #         self.debugLog(u"Checked lastcommand SAME MESSAGE parsing aborted.")
+        #     return
 
         if self.allowedBuddies is None or self.allowedBuddies=='':
-            self.logger.info(u'Message Received but Allowed Buddies nil please set in Config')
+            self.logger.info(u'Message Received but Allowed Buddies Empty. Please set in Plugin Config')
             return
 
-        if self.showBuddies:
-            self.logger.error(u'iMessage Received from Buddy:  Buddy Handle Below:')
-            self.logger.error(unicode(messages[0]))
-
-
-        if messages[0] in self.allowedBuddies:
+        for sublist in messages:
             if self.debugextra:
-                self.logger.debug(u'Passed against allowed Buddies: ' + unicode(messages))
-                self.logger.debug(u'Allowed Buddies Equal:'+unicode(self.allowedBuddies))
-        else:
-            if self.debugextra:
-                self.logger.debug(u'Message Received - but buddyhandle not allowed; Handled received equals:'+unicode(messages[0]))
-                self.logger.debug(u'Allowed Buddies Equal:' + unicode(self.allowedBuddies))
-                return
+                self.logger.debug(u'Checking messages:  Received: Buddy :'+unicode(sublist[0])+ ' Received Message:'+unicode(sublist[1]))
+            if sublist[0] not in buddiescurrent:
+                buddiescurrent = buddiescurrent + (sublist[0],)
+                if self.debugextra:
+                    self.logger.debug(u'Buddies Current now equals:'+unicode(buddiescurrent))
 
+        # Check for duplicate messages - use a set
+        b_set = set(map(tuple,messages))
+        messages = map(list,b_set)
         if self.debugextra:
-            self.logger.debug( u'self.lastcommand : '+ unicode(self.lastcommand )+ ' & message =:' + unicode(messages))
+            self.logger.debug(u'Deleted Duplicate Messages : New messages now equals:'+unicode(messages))
+        # just uses current ....
+        # should go through each buddy and update..
 
-        self.lastcommand = messages
-        self.lastBuddy = messages[0]
+        if self.showBuddies:
+            self.logger.error(u'iMessage Received from Buddy(s):  Buddy(s) Handle Below:')
+            for buddies in buddiescurrent:
+                self.logger.error(unicode(buddies))
 
-        for sublist in self.awaitingConfirmation:
-            if sublist[0] == messages[0]:
+        for i, v  in enumerate(messages):
+            if v[0] in self.allowedBuddies:
+                if self.debugextra:
+                    self.logger.debug(u'Passed against allowed Buddies: ' + unicode(messages))
+                    self.logger.debug(u'Allowed Buddies Equal:'+unicode(self.allowedBuddies))
+                    self.logger.debug(u'Received Buddy equals:'+unicode(v[0]))
+            else:
+                if self.debugextra:
+                    self.logger.debug(u'Message Received - but buddyhandle not allowed; Handled received equals:'+unicode(v[0]))
+                    self.logger.debug(u'Allowed Buddies Equal:' + unicode(self.allowedBuddies))
+                    self.logger.debug(u'Deleting this message, continuing with others parsing')
+                messages.remove(messages[i])
+
+        #self.lastcommand = messages
+        #self.lastBuddy = messages[0]
+        for i,v in enumerate(messages):
+            for sublist in self.awaitingConfirmation:
+                if sublist[0] == v[0]:
                 # Buddle has a outstanding confirmation awaited.
                 # check against valid replies
-                if self.checkanswer(messages[0],messages[1],sublist):
-                    if self.debugextra:
-                        self.logger.debug(u'Confirmation received so parsing message ending.  No trigger check.')
-                    return
+                    if self.checkanswer(v[0],v[1],sublist):
+                        if self.debugextra:
+                            self.logger.debug(u'Confirmation received so deleting this message, ending.  No trigger check on this message.')
+                            self.logger.debug(u'messages equals:')+unicode(messages)
+                        messages.remove(messages[i])
+                        self.logger.debug(u'Message part deleted now equals:'+unicode(messages))
 
-        self.triggerCheck('', 'commandReceived', messages[1].lower() )
-        self.lastcommand = messages
-        self.lastBuddy = messages[0]
+        if self.debugextra:
+            self.logger.debug(u'SELF.lastcommand PRIOR equals:' + unicode(self.lastCommandsent))
+
+        for i,v in enumerate(messages):
+            # now check last message and don't act if the same
+            # check if list nested or not
+            if self.lastCommandsent:  # check not empty list
+                if any( isinstance(i, list) for i in self.lastCommandsent):  #if true nested list
+                    for sublist in self.lastCommandsent:
+                        if self.debugextra:
+                            self.logger.debug(unicode(sublist))
+                            self.logger.debug(u'sublist[0]:'+sublist[0]+u' v[0]:'+unicode(v[0]))
+                        if sublist[0]==v[0]:
+                            if self.debugextra:
+                                self.logger.debug(u'Buddy last command found: Buddy:'+unicode(v[0])+u'and last message:'+unicode(v[1]))
+                            if v[1]==sublist[1]:
+                                if self.debugextra:
+                                    self.logger.debug(u'Same Message found.  This repeated message will be ignored. Message ignored:'+unicode(v[1]))
+                                messages.remove(messages[i])
+                                if self.debugextra:
+                                    self.logger.debug(u'Same Message found.  New Messages equals:'+unicode(messages))
+                else:  # returns false simple list
+                    if self.debugextra:
+                        self.logger.debug(u'self.lastCommandSent[0]:' + unicode(self.lastCommandsent[0]) + u' v[0]:' + unicode(v[0]))
+                    if self.lastCommandsent[0] == v[0]:
+                        if self.debugextra:
+                            self.logger.debug( u'Buddy last command found: Buddy:' + unicode(v[0]) + u'and last message:' + unicode(v[1]))
+                        if v[1] == self.lastCommandsent[1]:
+                            if self.debugextra:
+                                self.logger.debug(  u'Same Message found.  This repeated message will be ignored. Message ignored:' + unicode(v[1]))
+                            self.logger.info(u'Same message received:'+unicode(v[1])+u' from same Buddy:'+unicode(v[0]) +u' this duplicate will be ignored.')
+                            messages.remove(messages[i])
+                            if self.debugextra:
+                                self.logger.debug(u'Same Message found.  New Messages equals:' + unicode(messages))
+        # last message
+        if self.debugextra:
+            self.logger.debug(u'Length messages:'+unicode(len(messages)))
+        if len(messages)>1:
+            self.lastCommandsent = messages
+        elif len(messages)==1:
+            self.lastCommandsent = [item for sublist in messages for item in sublist]
+
+        # if only one flatten the nest list as was causing issues
+        # need now to deal with nested sometimes, list others - above
+
+        #self.lastCommandsent = [subl for subl in self.lastCommandsent if subl[0] != v[0]]
+
+        if self.debugextra:
+            self.logger.debug(u'self.lastcommand equals:' + unicode(self.lastCommandsent))
+
+        for i,v in enumerate(messages):
+            self.lastBuddy = v[0]
+            self.triggerCheck('', 'commandReceived', v[1].lower() )
+            messages.remove(messages[i])
+            if self.debugextra:
+                self.logger.debug(
+                    u'Command Sent received so deleting this message, ending.  No trigger check on this message.')
+                self.logger.debug(u'messages equals:' + unicode(messages))
+
+
         return
 #######
     #
