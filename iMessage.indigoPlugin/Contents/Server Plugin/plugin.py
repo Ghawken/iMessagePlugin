@@ -409,14 +409,16 @@ class Plugin(indigo.PluginBase):
         #self.lastBuddy = messages[0]
         for key,value in messages.items():
             for sublist in self.awaitingConfirmation:
+                if self.debugextra:
+                    self.logger.debug(u'self.awaitingConfirmation:'+unicode(self.awaitingConfirmation))
                 if sublist[0] == key:
                 # Buddle has a outstanding confirmation awaited.
                 # check against valid replies
                     if self.checkanswer(key,value,sublist):
                         if self.debugextra:
                             self.logger.debug(u'Confirmation received so deleting this message, ending.  No trigger check on this message.')
-                            self.logger.debug(u'messages equals:')+unicode(messages)
-                        messages.remove(messages[i])
+                            self.logger.debug(u'messages equals:'+unicode(messages))
+                        messages.pop(key, None)
                         self.logger.debug(u'Message part deleted now equals:'+unicode(messages))
 
         if self.debugextra:
@@ -428,11 +430,11 @@ class Plugin(indigo.PluginBase):
             if self.lastCommandsent:  # check not empty list
                 for keylast,vallast in self.lastCommandsent.items():
                     if self.debugextra:
-                        self.logger.debug(unicode(keylast)+' : '+unicode(vallast))
+                        self.logger.debug(unicode(u'checking last commands sent:'+unicode(keylast)+' : '+unicode(vallast))
                         self.logger.debug(u'LastCommandsent Key:'+unicode(keylast)+u' Messages Key:'+unicode(keymsg))
                     if keymsg==keylast:
                         if self.debugextra:
-                            self.logger.debug(u'Buddy last command found: Buddy:'+unicode(keylast)+u'and last message:'+unicode(keymsg))
+                            self.logger.debug(u'Buddy last command found: Buddy:'+unicode(keylast)+u' and last message:'+unicode(valmsg))
                         if valmsg==vallast:
                             if self.debugextra:
                                 self.logger.info(u'Same Message found.  This repeated message will be ignored. Message ignored: '+unicode(valmsg))
