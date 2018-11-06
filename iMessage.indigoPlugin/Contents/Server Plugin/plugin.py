@@ -181,12 +181,14 @@ class Plugin(indigo.PluginBase):
                     self.parsemessages(messages)
                 if len(self.awaitingConfirmation)>0:
                     self.checkTimeout()
-                if self.lastCommandsent==False:
+                if self.lastCommandsent:
                     if t.time() > self.resetLastCommand:
                         if self.debugextra:
                             self.logger.debug(u'Within RunConcurrent Thread: Resetting self.lastcommandsent')
                         self.lastCommandsent.clear()
                         self.resetLastCommand = t.time()+120
+                        if self.debugextra:
+                            self.logger.debug(u'Now Self.lastcommandsent :'+unicode(self.lastCommandsent))
 
         except self.StopThread:
             self.debugLog(u'Restarting/or error. Stopping  thread.')
@@ -437,7 +439,7 @@ class Plugin(indigo.PluginBase):
                             self.logger.debug(u'Buddy last command found: Buddy:'+unicode(keylast)+u' and last message:'+unicode(valmsg))
                         if valmsg==vallast:
                             if self.debugextra:
-                                self.logger.info(u'Same Message found.  This repeated message will be ignored. Message ignored: '+unicode(valmsg))
+                                self.logger.debug(u'Same Message found.  This repeated message will be ignored. Message ignored: '+unicode(valmsg))
                             messages.pop(keymsg, None)
                             if self.debugextra:
                                 self.logger.debug(u'Same Message found.  New Messages equals:'+unicode(messages))
