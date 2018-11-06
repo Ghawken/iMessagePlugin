@@ -328,6 +328,7 @@ class Plugin(indigo.PluginBase):
         if self.debugextra:
             self.logger.debug(unicode(reply))
 
+
     def as_sendpicture(self, imsgUser, imsgFile):
         if self.debugextra:
             self.debugLog(u"as_sendpicture() method called.")
@@ -701,6 +702,45 @@ class Plugin(indigo.PluginBase):
             else:
                 self.logger.exception(u'An unhandled exception was caught here from SendiMsg:'+unicode(ex))
         return
+
+    def sendiMsgMsgPicture(self, action):
+        if self.debugextra:
+            self.debugLog(u"sendImsgMsgPicture() method called.")
+        theMessage = self.substitute(action.props.get("message", ""))
+        buddyHandle = action.props.get('buddyId', '')
+        lastbuddy = action.props.get('lastBuddy', False)
+        filepath = action.props.get('filepath','')
+        if lastbuddy:
+            buddyHandle = str(self.lastBuddy)
+
+        if self.debugextra:
+            self.debugLog(u"sendImsgMsgPicture() buddyHandle:" + unicode(buddyHandle) + u' and theMessage:' + unicode(
+                theMessage) + u' and use lastBuddy:' + unicode(lastbuddy))
+        if buddyHandle == '':
+            self.logger.debug(u'Message sending aborted as buddy Handle is blank')
+            self.logger.debug(u'If using LastBuddy need to send message before this is filled')
+            return
+        try:
+            self.as_sendmessage(buddyHandle, theMessage)
+            self.sleep(1.5)
+            self.as_sendpicture(buddyHandle, filepath)
+
+        except Exception as ex:
+            errortype = type(ex).__name__
+            self.logger.debug(
+                u'A error of type :' + unicode(errortype) + ' occured.  The longer message is :' + unicode(ex.message))
+            if errortype == 'ScriptError':
+                if "Can?t get buddy id" in str(ex):
+                    self.logger.error(u'An error occured sending to buddy Handle:  ' + unicode(buddyHandle))
+                    self.logger.error(u'It seems the buddy Handle is not correct.')
+                else:
+                    self.logger.error(u'An Error occured within the iMsg AppleScript component - ScriptError')
+                    self.logger.error(u'The Error was :' + unicode(ex))
+            else:
+                self.logger.exception(u'An unhandled exception was caught here from SendiMsg:' + unicode(ex))
+        return
+
+
 
     def sendiMsgPicture(self, action):
         if self.debugextra:

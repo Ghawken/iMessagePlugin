@@ -7,7 +7,7 @@
             <Field type="label" id="schedule_label">
                 <Label>Select the Buddy Handle to send message to</Label>
             </Field>
-            <Field type="menu" id="buddyId">
+            <Field type="menu" id="buddyId" visibleBindingId="lastBuddy" visibleBindingValue="false"  >
                 <Label>Buddy Handle:</Label>
                 <List class="self" method="buddyListGenerator" dynamicReload="false"/>
             </Field>
@@ -27,14 +27,45 @@
             </Field>
         </ConfigUI>
     </Action>
- <Action id="sendFile">
+  <Action id="sendMsgFile">
+        <Name>Send iMsg Message plus Picture/File</Name>
+        <CallbackMethod>sendiMsgMsgPicture</CallbackMethod>
+        <ConfigUI>
+            <Field type="label" id="schedule_label">
+                <Label>Select the Buddy Handle to send message to</Label>
+            </Field>
+            <Field type="menu" id="buddyId" visibleBindingId="lastBuddy" visibleBindingValue="false" >
+                <Label>Buddy Handle:</Label>
+                <List class="self" method="buddyListGenerator" dynamicReload="false"/>
+            </Field>
+            <Field type="checkbox" id="lastBuddy">
+                <Label>Use last Buddy Handle message received from?:</Label>
+            </Field>
+            <Field type="textfield" id="message">
+                <Label>Message to Send:
+
+
+
+
+
+
+                </Label>
+            </Field>
+            <Field type="textfield" id="filepath">
+                <Label>Path to File:</Label>
+            </Field>
+        </ConfigUI>
+    </Action>
+
+
+    <Action id="sendFile">
         <Name>Send iMsg Picture/File</Name>
         <CallbackMethod>sendiMsgPicture</CallbackMethod>
         <ConfigUI>
             <Field type="label" id="schedule_label">
                 <Label>Select the Buddy Handle to send message to</Label>
             </Field>
-            <Field type="menu" id="buddyId">
+            <Field type="menu" id="buddyId" visibleBindingId="lastBuddy" visibleBindingValue="false" >
                 <Label>Buddy Handle:</Label>
                 <List class="self" method="buddyListGenerator" dynamicReload="false"/>
             </Field>
@@ -53,7 +84,7 @@
             <Field type="label" id="schedule_label">
                 <Label>Select the Buddy Handle to send message to</Label>
             </Field>
-            <Field type="menu" id="buddyId">
+            <Field type="menu" id="buddyId" visibleBindingId="lastBuddy" visibleBindingValue="false" >
                 <Label>Buddy Handle:</Label>
                 <List class="self" method="buddyListGenerator" dynamicReload="false"/>
             </Field>
