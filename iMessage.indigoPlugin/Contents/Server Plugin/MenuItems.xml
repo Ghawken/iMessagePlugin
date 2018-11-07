@@ -12,4 +12,8 @@
     <Name>Toggle Debugging</Name>
     <CallbackMethod>toggleDebugEnabled</CallbackMethod>
   </MenuItem>
+    <MenuItem id="status">
+    <Name>Log Current Status</Name>
+    <CallbackMethod>logStatus</CallbackMethod>
+  </MenuItem>
 </MenuItems>

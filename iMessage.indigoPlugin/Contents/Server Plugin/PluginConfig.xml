@@ -69,9 +69,9 @@
         <Label/>
         <Description>Debug Triggers</Description>
     </Field>
-    <Field id="debugextra3" type="checkbox" tooltip="">
+    <Field id="debugexceptions" type="checkbox" tooltip="">
         <Label/>
-        <Description>Debug Extra 3</Description>
+        <Description>Debug Exceptions</Description>
     </Field>
     <Field id="showDebugLevel" type="menu" defaultValue="20" tooltip="Controls the amount of debug information written to the log.">
         <Label>Debug level:</Label>

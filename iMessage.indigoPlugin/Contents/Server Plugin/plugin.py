@@ -54,11 +54,12 @@ class Plugin(indigo.PluginBase):
         self.indigo_log_handler.setLevel(self.logLevel)
         self.logger.debug(u"logLevel = " + str(self.logLevel))
         self.triggers = {}
-
+        self.pluginVersion = pluginVersion
         self.updateFrequency = float(self.pluginPrefs.get('updateFrequency', "24")) * 60.0 * 60.0
         self.showBuddies = self.pluginPrefs.get('showBuddies', False)
         self.debugextra = self.pluginPrefs.get('debugextra', False)
         self.debugtriggers = self.pluginPrefs.get('debugtriggers', False)
+        self.debugexceptions = self.pluginPrefs.get('debugexceptions', False)
         self.openStore = self.pluginPrefs.get('openStore', False)
 
         self.resetLastCommand = t.time()+60
@@ -95,6 +96,7 @@ class Plugin(indigo.PluginBase):
             self.debugLog(u"User prefs saved.")
             #self.debug = valuesDict.get('showDebugInfo', False)
             self.debugextra = valuesDict.get('debugextra', False)
+            self.debugexceptions = valuesDict.get('debugexceptions', False)
             self.debugtriggers = valuesDict.get('debugtriggers', False)
             self.prefsUpdated = True
             self.updateFrequency = float(valuesDict.get('updateFrequency', "24")) * 60.0 * 60.0
@@ -199,6 +201,8 @@ class Plugin(indigo.PluginBase):
                             self.logger.debug(
                                 u'Error checking for update - ? No Internet connection.  Checking again in 24 hours')
                             self.next_update_check = self.next_update_check + 86400
+                            if self.debugexceptions:
+                                self.logger.exception(u'Exception:')
         except self.StopThread:
             self.debugLog(u'Restarting/or error. Stopping  thread.')
             self.closesql()
@@ -211,29 +215,33 @@ class Plugin(indigo.PluginBase):
             self.debugLog(u"connectsql() method called.")
         try:
             ## update to multiple users
-            backupfilename = os.path.expanduser('~/Documents/Indigo-iMsgBackup/')
+            self.backupfilename = os.path.expanduser('~/Documents/Indigo-iMsgBackup/')
             diriMsgdb = os.path.expanduser('~/Library/Messages/')
-            if os.path.exists(backupfilename)==False:
-                os.mkdir(backupfilename)
-                self.logger.info(u'Backing up Current iMsg Database Directory to :' + unicode(backupfilename))
+            if os.path.exists(self.backupfilename)==False:
+                #if os.path.exists(self.backupfilename)==False:
+                os.mkdir(self.backupfilename)
+                self.logger.info(u'Backing up Current iMsg Database Directory to :' + unicode(self.backupfilename))
                 src_files = os.listdir(diriMsgdb)
                 for file_name in src_files:
                     full_filename = os.path.join(diriMsgdb,file_name)
                     if (os.path.isfile(full_filename)):
-                        shutil.copy(full_filename, backupfilename)
+                        shutil.copy(full_filename, self.backupfilename)
                         self.logger.debug(u'Backed up file:'+full_filename)
 
-            filename = os.path.expanduser('~/Library/Messages/chat.db')
+            self.filename = os.path.expanduser('~/Library/Messages/chat.db')
             if self.debugextra:
-                self.logger.debug(u'ConnectSQL: Filename location for iMsg chat.db equals:'+unicode(filename))
-            self.connection = sqlite3.connect(filename)
+                self.logger.debug(u'ConnectSQL: Filename location for iMsg chat.db equals:'+unicode(self.filename))
+            self.connection = sqlite3.connect(self.filename)
             if self.debugextra:
                 self.debugLog(u"Connect to Database Successful.")
+            self.logger.info(u'Connection to iMsg Database Successful.')
         except:
             self.logger.error(u'Problem connecting to iMessage database....')
             self.logger.error(u'Most likely you have not allowed IndigoApp and IndigoServer Full Disk Access')
             self.logger.error(u'Please see instructions.  This only needs to be done once.')
             self.logger.error(u'Once done please restart the plugin.')
+            if self.debugextra:
+                self.logger.exception(u'and here is the Exception (self.debugexceptions is on:)')
             self.sleep(600)
             return
 
@@ -243,8 +251,10 @@ class Plugin(indigo.PluginBase):
         try:
             self.connection.close()
         except:
-            self.logger.exception(u'Exception in CloseSQL')
-
+            if self.debugexceptions:
+                self.logger.exception(u'Exception in closeSql:')
+            if self.debugextra:
+                self.logger.debug(u'Error in Close Sql - Probably was not connected')
 
     def sql_fetchmessages(self):
        # if self.debugextra:
@@ -669,9 +679,13 @@ class Plugin(indigo.PluginBase):
                 if "Can?t get buddy id" in str(ex):
                     self.logger.error(u'An error occured sending to buddy Handle:  '+unicode(buddyHandle))
                     self.logger.error(u'It seems the buddy Handle is not correct.')
+                    if self.debugexceptions:
+                        self.logger.exception(u'Exception:')
                 else:
                     self.logger.error(u'An Error occured within the iMsg AppleScript component - ScriptError')
                     self.logger.error(u'The Error was :'+unicode(ex))
+                    if self.debugexceptions:
+                        self.logger.exception(u'Exception:')
             else:
                 self.logger.exception(u'An unhandled exception was caught here from SendiMsgQuestion:'+unicode(ex))
         return
@@ -703,9 +717,13 @@ class Plugin(indigo.PluginBase):
                 if "Can?t get buddy id" in str(ex):
                     self.logger.error(u'An error occured sending to buddy Handle:  '+unicode(buddyHandle))
                     self.logger.error(u'It seems the buddy Handle is not correct.')
+                    if self.debugexceptions:
+                        self.logger.exception(u'Exception:')
                 else:
                     self.logger.error(u'An Error occured within the iMsg AppleScript component - ScriptError')
                     self.logger.error(u'The Error was :'+unicode(ex))
+                    if self.debugexceptions:
+                        self.logger.exception(u'Exception:')
             else:
                 self.logger.exception(u'An unhandled exception was caught here from SendiMsg:'+unicode(ex))
         return
@@ -740,9 +758,13 @@ class Plugin(indigo.PluginBase):
                 if "Can?t get buddy id" in str(ex):
                     self.logger.error(u'An error occured sending to buddy Handle:  ' + unicode(buddyHandle))
                     self.logger.error(u'It seems the buddy Handle is not correct.')
+                    if self.debugexceptions:
+                        self.logger.exception(u'Exception:')
                 else:
                     self.logger.error(u'An Error occured within the iMsg AppleScript component - ScriptError')
                     self.logger.error(u'The Error was :' + unicode(ex))
+                    if self.debugexceptions:
+                        self.logger.exception(u'Exception:')
             else:
                 self.logger.exception(u'An unhandled exception was caught here from SendiMsg:' + unicode(ex))
         return
@@ -775,12 +797,18 @@ class Plugin(indigo.PluginBase):
                 if "Can?t get buddy id" in str(ex):
                     self.logger.error(u'An error occured sending to buddy Handle:  '+unicode(buddyHandle))
                     self.logger.error(u'It seems the buddy Handle is not correct.')
+                    if self.debugexceptions:
+                        self.logger.exception(u'Exception:')
                 elif "Can?t get POSIX" in str(ex):
                     self.logger.error(u'An error occured sending to buddy :  '+unicode(buddyHandle))
                     self.logger.error(u'It seems that the File is not readable?  File given:'+unicode(theMessage))
+                    if self.debugexceptions:
+                        self.logger.exception(u'Exception:')
                 else:
                     self.logger.error(u'An Error occured within the iMsg AppleScript component - ScriptError')
                     self.logger.error(u'The Error was :'+unicode(ex))
+                    if self.debugexceptions:
+                        self.logger.exception(u'Exception:')
             else:
                 self.logger.exception(u'An unhandled exception was caught here from SendiMsgPicture:'+unicode(ex))
 
@@ -811,16 +839,43 @@ class Plugin(indigo.PluginBase):
             self.logLevel = int(logging.INFO)
             self.logger.debug(u"New logLevel = " + str(self.logLevel))
             self.indigo_log_handler.setLevel(self.logLevel)
+##################
+
+
+    def logStatus(self):
+
+        self.logger.debug(u'logStatus Menu Item Called')
+        self.logger.info(u"{0:=^130}".format(" Plugin Details "))
+        self.logger.info(u"{0:<30} {1}".format("Indigo version:", indigo.server.version))
+        self.logger.info(u"{0:<30} {1}".format("Python version:", sys.version.replace('\n', '')))
+        self.logger.info(u"{0:<30} {1}".format("Python Directory:", sys.prefix.replace('\n', '')))
+        self.logger.info(u"{0:<30} {1}".format("Allowed Buddies:", self.allowedBuddies))
+        self.logger.info(u"{0:<30} {1}".format("Current Messages:", self.messages))
+        self.logger.info(u"{0:<30} {1}".format("Last Buddy:", self.lastBuddy))
+        self.logger.info(u"{0:<30} {1}".format("Last Command Sent:", self.lastCommandsent))
+        if self.triggers:
+            for triggerId, trigger in sorted(self.triggers.iteritems()):
+                self.logger.info(u"{0:<30} {1}".format("Triggers:", trigger.pluginTypeId +'  :  '+ trigger.name))
+        self.logger.info(u"{0:<30} {1}".format("Awaiting Confirmation:", self.awaitingConfirmation))
+        self.logger.info(u"{0:<30} {1}".format("Reset Last Command:", self.resetLastCommand))
+
+        self.logger.info(u"{0:<30} {1}".format("Backup Directory:", self.backupfilename))
+        self.logger.info(u"{0:<30} {1}".format("SQL Database Location:", self.filename))
+
+        self.logger.info(u"{0:=^130}".format(""))
+
 
 ##################  Trigger
 
     def triggerStartProcessing(self, trigger):
-        self.logger.debug("Adding Trigger %s (%d) - %s" % (trigger.name, trigger.id, trigger.pluginTypeId))
+        if self.debugtriggers:
+            self.logger.debug("Adding Trigger %s (%d) - %s" % (trigger.name, trigger.id, trigger.pluginTypeId))
         assert trigger.id not in self.triggers
         self.triggers[trigger.id] = trigger
 
     def triggerStopProcessing(self, trigger):
-        self.logger.debug("Removing Trigger %s (%d)" % (trigger.name, trigger.id))
+        if self.debugtriggers:
+            self.logger.debug("Removing Trigger %s (%d)" % (trigger.name, trigger.id))
         assert trigger.id in self.triggers
         del self.triggers[trigger.id]
 
@@ -842,6 +897,9 @@ class Plugin(indigo.PluginBase):
 
 
         except:
-            self.logger.exception(u'Exception within Trigger Check')
+            if self.debugexceptions:
+                self.logger.exception(u'Exception within Trigger Check:')
+            if self.debugextra:
+                self.logger.debug(u'Exception within Trigger Check')
             return
 
