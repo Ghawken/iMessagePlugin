@@ -55,13 +55,14 @@ class Plugin(indigo.PluginBase):
         self.logger.debug(u"logLevel = " + str(self.logLevel))
         self.triggers = {}
 
+        self.updateFrequency = float(self.pluginPrefs.get('updateFrequency', "24")) * 60.0 * 60.0
         self.showBuddies = self.pluginPrefs.get('showBuddies', False)
         self.debugextra = self.pluginPrefs.get('debugextra', False)
         self.debugtriggers = self.pluginPrefs.get('debugtriggers', False)
         self.openStore = self.pluginPrefs.get('openStore', False)
 
         self.resetLastCommand = t.time()+60
-
+        self.next_update_check = t.time()
         self.lastCommandsent = dict()
         self.lastBuddy =''
         self.awaitingConfirmation = []    # buddy handle within here if waiting a reply yes or no
@@ -162,7 +163,7 @@ class Plugin(indigo.PluginBase):
         self.updater.update()
 
     def pluginstoreUpdate(self):
-        iurl = 'https://github.com/Ghawken/iMessagePlugin/releases/'
+        iurl = 'http://www.indigodomo.com/pluginstore/195/'
         self.browserOpen(iurl)
 
     #####
@@ -189,7 +190,15 @@ class Plugin(indigo.PluginBase):
                         self.resetLastCommand = t.time()+120
                         if self.debugextra:
                             self.logger.debug(u'Now Self.lastcommandsent :'+unicode(self.lastCommandsent))
-
+                if self.updateFrequency > 0:
+                    if t.time() > self.next_update_check:
+                        try:
+                            self.checkForUpdates()
+                            self.next_update_check = t.time() + self.updateFrequency
+                        except:
+                            self.logger.debug(
+                                u'Error checking for update - ? No Internet connection.  Checking again in 24 hours')
+                            self.next_update_check = self.next_update_check + 86400
         except self.StopThread:
             self.debugLog(u'Restarting/or error. Stopping  thread.')
             self.closesql()
@@ -217,17 +226,15 @@ class Plugin(indigo.PluginBase):
             filename = os.path.expanduser('~/Library/Messages/chat.db')
             if self.debugextra:
                 self.logger.debug(u'ConnectSQL: Filename location for iMsg chat.db equals:'+unicode(filename))
-            #filename = '/Users/Indigo/Library/Messages/chat.db'
-          #  fd = os.open(filename, os.O_RDONLY)
-
-           # self.logger.debug(unicode(fd))
-            #self.connection = sqlite3.connect('/dev/fd/%d' % fd)
             self.connection = sqlite3.connect(filename)
             if self.debugextra:
                 self.debugLog(u"Connect to Database Successful.")
         except:
-            self.logger.exception(u'Exception connecting to database....')
-            self.sleep(15)
+            self.logger.error(u'Problem connecting to iMessage database....')
+            self.logger.error(u'Most likely you have not allowed IndigoApp and IndigoServer Full Disk Access')
+            self.logger.error(u'Please see instructions.  This only needs to be done once.')
+            self.logger.error(u'Once done please restart the plugin.')
+            self.sleep(600)
             return
 
     def closesql(self):
