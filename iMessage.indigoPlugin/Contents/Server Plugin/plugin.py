@@ -4,6 +4,7 @@
 """
 iMessage
 First draft
+# wit.ai message parsing...
 
 """
 import logging
@@ -144,7 +145,7 @@ class Plugin(indigo.PluginBase):
             else:
                 buddyList = [('option1', 'No Allowed Buddies Setup PluginConfig'),('option2','Please Setup in Plugin Config')]
         else:
-            buddyList = [('option1', 'No Allowed Buddies Setup PluginConfig'),
+            buddyList = [('option1', 'No Allowed Buddies are Setup in PluginConfig'),
                          ('option2', 'Please Setup in Plugin Config')]
         if self.debugextra:
             self.debugLog(u"Full BuddyList equals:"+unicode(buddyList))
