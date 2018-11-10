@@ -46,10 +46,52 @@
         <Description>Enable/Disable</Description>
     </Field>
  <Field id="sep9" type="separator"/>
+  <Field id="space120" type="label" alignText="left">
+    <Label>Wit.Ai AI:</Label>
+  </Field>
+     <Field id="usewit_Ai" type="checkbox" tooltip="Enabling will use Wit_Ai.">
+        <Label/>
+        <Description>Use Wit.Ai Processing:</Description>
+    </Field>
+
+   <Field id="access_token" type="textfield" defaultValue="" tooltip="Witopia Access Token" dynamicreload="true">
+    <Label>Access Token:</Label>
+  </Field>
+      <Field id="generateWitAIApp"
+				   type="button"
+				   tooltip="Click on this button to Generate Wit.Ai Data / Application">
+				<Label>Generate Wit.AI App</Label>
+				<Title>Generate Wit.AI App</Title>
+				<CallbackMethod>wit_ThreadCreate</CallbackMethod>
+      </Field>
+          <Field id="space2ae" type="label" fontSize="small" fontColor="black">
+    <Label>
+        This will use the Access Token above to create a new Indigo iMessage App
+        This new App - will have a new access token and the above should change to reflect that
+        If wish to start from scratch - delete Wit.Ai App in Web Browser
+        This will take at least 5 minutes and possibility longer.
+        It will run in a seperate thread.
+        Once Complete - Indigo log will let you know
+    </Label>
+  </Field>
+   <Field id="main_access_token" type="textfield" fontColor="black" tooltip="Witopia Access Token NEW" readonly="true">
+    <Label>New App Access Token:</Label>
+  </Field>
+   <Field id="app_id" type="textfield" tooltip="Witopia App Id Token NEW" fontColor="black" readonly="true" >
+    <Label>App_ID:</Label>
+  </Field>
+        <Field id="deletewitApp"
+				   type="button"
+				   tooltip="Click on this button to Delete all Wit.Ai Data / Application">
+				<Label>Delete Wit.AI App</Label>
+				<Title>Delete Wit.AI App</Title>
+				<CallbackMethod>wit_Delete</CallbackMethod>
+      </Field>
 
 
 
 
+ <Field id="sep12139" type="separator"/>
 
   <Field id="space10" type="label" alignText="left">
     <Label>Debugging:</Label>
@@ -86,5 +128,6 @@
         </List>
 
   </Field>
+
 
 </PluginConfig>

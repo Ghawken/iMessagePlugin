@@ -16,4 +16,9 @@
     <Name>Log Current Status</Name>
     <CallbackMethod>logStatus</CallbackMethod>
   </MenuItem>
+        <MenuItem id="wit.ai">
+    <Name>Wit.Ai Testing</Name>
+    <CallbackMethod>witaitesting</CallbackMethod>
+  </MenuItem>
+
 </MenuItems>

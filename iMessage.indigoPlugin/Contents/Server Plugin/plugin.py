@@ -16,7 +16,10 @@ import shutil
 from ghpu import GitHubPluginUpdater
 import sqlite3
 import applescript
+import requests
+import json
 
+import threading
 
 try:
     import indigo
@@ -62,6 +65,7 @@ class Plugin(indigo.PluginBase):
         self.debugtriggers = self.pluginPrefs.get('debugtriggers', False)
         self.debugexceptions = self.pluginPrefs.get('debugexceptions', False)
         self.openStore = self.pluginPrefs.get('openStore', False)
+        self.use_witAi = self.pluginPrefs.get('use_witAi', False)
 
         self.resetLastCommand = t.time()+60
         self.next_update_check = t.time()
@@ -71,7 +75,8 @@ class Plugin(indigo.PluginBase):
 #  'buddy', 'AGtorun', 'timestamp', 'iMsgConfirmed'
 
         self.messages = []
-
+        self.access_token = self.pluginPrefs.get('access_token','')
+        self.app_id = self.pluginPrefs.get('app_id','')
         self.allowedBuddies = self.pluginPrefs.get('allowedBuddies','')
         self.prefServerTimeout = int(self.pluginPrefs.get('configMenuServerTimeout', "15"))
         self.configUpdaterInterval = self.pluginPrefs.get('configUpdaterInterval', 24)
@@ -107,6 +112,7 @@ class Plugin(indigo.PluginBase):
             except:
                 self.logLevel = logging.INFO
 
+            self.use_witAi = valuesDict.get('use_witAi', False)
             self.indigo_log_handler.setLevel(self.logLevel)
             self.showBuddies = valuesDict.get('showBuddies', False)
             self.allowedBuddies = valuesDict.get('allowedBuddies', '')
@@ -114,6 +120,7 @@ class Plugin(indigo.PluginBase):
             self.logger.debug(u"logLevel = " + str(self.logLevel))
             self.logger.debug(u"User prefs saved.")
             self.logger.debug(u"Debugging on (Level: {0})".format(self.logLevel))
+            self.access_token = valuesDict.get('access_token','')
 
         return True
 
@@ -478,14 +485,20 @@ class Plugin(indigo.PluginBase):
 
         for key,val in messages.items():
             self.lastBuddy = key
-            self.triggerCheck('', 'commandReceived', val.lower() )
-            self.resetLastCommand = t.time()+120
-            messages.pop(key, None)
-            if self.debugextra:
-                self.logger.debug(
-                    u'Command Sent received so deleting this message, ending.  No trigger check on this message.')
-                self.logger.debug(u'messages equals:' + unicode(messages))
-
+            if self.triggerCheck('', 'commandReceived', val.lower() ):
+                self.resetLastCommand = t.time()+120
+                messages.pop(key, None)
+                if self.debugextra:
+                    self.logger.debug(u'Command Sent received so deleting this message, ending.  No trigger check on this message.')
+                    self.logger.debug(u'messages equals:' + unicode(messages))
+            else:
+                # not recognised as trigger or affirmation/negative
+        # send to wit.ai for processing...
+                if self.use_witAi:
+                    if self.debugextra:
+                        self.logger.debug(u'-- Message was not recognised - sending to Wit.Ai for processing')
+                    reply = self.wit_message(val,context=None, n=None,verbose=None)
+                    self.logger.error(unicode(reply))
 
         return
 #######
@@ -841,7 +854,274 @@ class Plugin(indigo.PluginBase):
             self.logger.debug(u"New logLevel = " + str(self.logLevel))
             self.indigo_log_handler.setLevel(self.logLevel)
 ##################
+    def witReq(self, access_token, meth, path, params, body, **kwargs):
+        WIT_API_HOST = 'https://api.wit.ai'
+        WIT_API_VERSION =  '20170307'
+        full_url = WIT_API_HOST + path
+        DEFAULT_MAX_STEPS = 5
 
+        self.logger.debug('%s %s %s', meth, full_url, params)
+        headers = {
+            'authorization': 'Bearer ' + access_token,
+            'accept': 'application/vnd.wit.' + WIT_API_VERSION + '+json'
+        }
+        headers.update(kwargs.pop('headers', {}))
+        rsp = requests.request(
+            meth,
+            full_url,
+            headers=headers,
+            params=params,
+            data=body,
+            **kwargs
+        )
+        if rsp.status_code > 200:
+            self.logger.error(u'Wit responded with status: ' + unicode(rsp.status_code) +
+                           ' (' + unicode(rsp.reason)  + ')')
+        json = rsp.json()
+        if 'error' in json:
+            self.logger.error(u'Wit responded with an error: ' + json['error'])
+        self.logger.debug('%s %s %s', meth, full_url, json)
+        return json
+
+    def wit_message(self, msg, context=None, n=None, verbose=None):
+        params = {}
+        if verbose:
+            params['verbose'] = verbose
+        if n is not None:
+            params['n'] = n
+        if msg:
+            params['q'] = msg
+        if context:
+            params['context'] = json.dumps(context)
+        resp = self.witReq(self.logger, self.access_token, 'GET', '/message', params)
+        return resp
+
+    def wit_ThreadCreate(self, valuesDict):
+        if self.debugextra:
+            self.logger.debug(u'Thread Create Wit.ai App Started..')
+        self.myThread = threading.Thread(target=self.witaitesting, args=())
+        self.myThread.daemon = True
+        self.myThread.start()
+
+    def wit_Delete(self, valuesDict):
+        if self.debugextra:
+            self.logger.debug(u'Thread Delete Wit.ai App Started..')
+        main_access_token = indigo.activePlugin.pluginPrefs.get('main_access_token','')
+        if main_access_token == '':
+            self.access_token = indigo.activePlugin.pluginPrefs.get('access_token','')
+        else:
+            self.access_token = main_access_token
+
+        checkappexists = self.wit_getappid(self.access_token)
+        if checkappexists == False:
+            self.logger.info(u'No Wit.Ai App appears to exist.')
+        else:
+            delete_app = self.wit_deleteapp(self.access_token)
+            self.logger.debug(unicode(delete_app))
+
+        indigo.activePlugin.pluginPrefs['main_access_token']=''
+        indigo.activePlugin.pluginPrefs['app_id']=''
+        indigo.server.savePluginPrefs()
+        return
+
+
+    def witaitesting(self):
+
+        if self.debugextra:
+            self.logger.debug(u'Wit.Ai test called')
+
+        # create new wit.ai app
+        main_access_token = self.pluginPrefs.get('main_access_token','')
+        if main_access_token == '':
+            self.access_token = indigo.activePlugin.pluginPrefs.get('access_token','')
+        else:
+            self.access_token = main_access_token
+
+        # check apps
+        checkappexists = self.wit_getappid(self.access_token)
+        if checkappexists==False or self.access_token=='':
+            # no app exisits
+            # create & get new access_token
+            access_token = self.wit_createapp(self.access_token)
+            indigo.activePlugin.pluginPrefs['main_access_token'] = self.access_token
+            indigo.server.savePluginPrefs()
+            self.wit_createentity(self.access_token, 'device_name')
+            self.wit_createentity(self.access_token, 'address')
+
+        base =[]
+        lookup = '{"lookups":["free-text", "keywords"]}'
+        #self.wit_deleteentity(self.access_token,'device_name')
+        #self.wit_deleteentity(self.access_token,'intent')
+
+
+        params = {}
+        params['v'] = '20170307'
+        entityput = self.witReq(self.access_token, 'PUT', '/entities/device_name', params, lookup)
+        self.logger.debug(unicode(entityput))
+        self.sleep(5)
+
+
+        array2 = '''{"doc":"Indigo device_name","lookups":["free-text","keywords"],"values":['''
+        #array2 = '''{"values":['''
+        x=0
+
+        for device in indigo.devices.itervalues():
+
+            devicename = str(device.name)
+            array2 = array2 + '''{"value":"'''+devicename+'''","expressions":["'''+devicename+'''"],"metadata" :  "''' + str(device.id) + '''"},'''
+        array2 = array2[:-1] + ']}'
+
+        #array2 = json.dumps(array2)
+        self.logger.debug(unicode(array2))
+        params = {}
+        params['v'] = '20181110'
+        entityput = self.witReq(self.access_token, 'PUT', '/entities/device_name', params, array2)
+        self.logger.debug(unicode(entityput))
+
+        for device in indigo.devices.itervalues():
+            if hasattr(device, "displayStateValRaw") and device.displayStateValRaw in ['0',False,True] :
+                x=x+4
+                devicename = str(device.name)
+                array = '''{"text":"Turn on '''+ devicename +'''","entities":[{"entity":"wit$on_off","value":"true"},{"entity":"device_name","value":"'''+devicename+'''"}]}'''
+                base.append(json.loads(array))
+                array = '''{"text":"'''+ devicename +''' on","entities":[{"entity":"wit$on_off","value":"true"},{"entity":"device_name","value":"'''+devicename+'''"}]}'''
+                base.append(json.loads(array))
+                array = '''{"text":"Turn off '''+ devicename +'''","entities":[{"entity":"wit$on_off","value":"false"},{"entity":"device_name","value":"'''+devicename+'''"}]}'''
+                base.append(json.loads(array))
+                array = '''{"text":"'''+ devicename +''' off","entities":[{"entity":"wit$on_off","value":"false"},{"entity":"device_name","value":"'''+devicename+'''"}]}'''
+                base.append(json.loads(array))
+            if 'temperature' in device.states or 'Temperature' in device.states:
+                x=x+4
+                devicename = str(device.name)
+                array = '''{"text":"What is the temperature of the ''' + devicename + '''","entities":[{"entity":"intent","value":"temperature"},{"entity":"device_name","value":"''' + devicename + '''"}]}'''
+                base.append(json.loads(array))
+                array = '''{"text":"Tell me the temperature of the ''' + devicename + '''","entities":[{"entity":"intent","value":"temperature"},{"entity":"device_name","value":"''' + devicename + '''"}]}'''
+                base.append(json.loads(array))
+                array = '''{"text":"''' + devicename + ''' temperature? ","entities":[{"entity":"intent","value":"temperature"},{"entity":"device_name","value":"''' + devicename + '''"}]}'''
+                base.append(json.loads(array))
+                array = '''{"text":"How hot is ''' + devicename + '''","entities":[{"entity":"intent","value":"temperature"},{"entity":"device_name","value":"''' + devicename + '''"}]}'''
+                base.append(json.loads(array))
+            if device.pluginId == 'com.GlennNZ.indigoplugin.FindFriendsMini' and device.model =='FindFriends Device':
+                x=x+2
+                devicename = str(device.name)
+                address = device.states['address']
+                array = '''{"text":"Where is ''' + devicename + '''","entities":[{"entity":"intent","value":"location"},{"entity":"device_name","value":"''' + devicename + '''"},{"entity":"address","value":"''' + address + '''"}]}'''
+                base.append(json.loads(array))
+                array = '''{"text":"Locate ''' + devicename + '''","entities":[{"entity":"intent","value":"location"},{"entity":"device_name","value":"''' + devicename + '''"},{"entity":"address","value":"''' + address + '''"}]}'''
+                base.append(json.loads(array))
+            if 'brightnessLevel' in device.states:
+                x = x + 6
+                devicename = str(device.name)
+                array = '''{"text":"Dim ''' + devicename + ''' to 10%","entities":[{"entity":"intent","value":"dim_set"},{"entity":"device_name","value":"''' + devicename + '''"},{"entity":"wit$number","value":"10"}]}'''
+                base.append(json.loads(array))
+                array = '''{"text":"Set ''' + devicename + ''' to 10% dim","entities":[{"entity":"intent","value":"dim_set"},{"entity":"device_name","value":"''' + devicename + '''"},{"entity":"wit$number","value":"10"}]}'''
+                base.append(json.loads(array))
+                array = '''{"text":"Dim ''' + devicename + ''' to 60%","entities":[{"entity":"intent","value":"dim_set"},{"entity":"device_name","value":"''' + devicename + '''"},{"entity":"wit$number","value":"60"}]}'''
+                base.append(json.loads(array))
+                array = '''{"text":"Set ''' + devicename + ''' to 60% brightness","entities":[{"entity":"intent","value":"dim_set"},{"entity":"device_name","value":"''' + devicename + '''"},{"entity":"wit$number","value":"60"}]}'''
+                base.append(json.loads(array))
+                array = '''{"text":"Set ''' + devicename + ''' to 10% brightness","entities":[{"entity":"intent","value":"dim_set"},{"entity":"device_name","value":"''' + devicename + '''"},{"entity":"wit$number","value":"10"}]}'''
+                base.append(json.loads(array))
+
+
+            if x > 185:
+                jsonbase = json.dumps(base)
+                replyend = self.witReq(self.access_token, 'POST', '/samples', '', jsonbase)
+                self.logger.debug(unicode(jsonbase))
+                self.logger.debug(unicode(replyend))
+                x = 0
+                del base[:]
+                self.sleep(71)
+        # and load again at end in case never make it to 195 samples
+        jsonbase = json.dumps(base)
+        replyend = self.witReq(self.access_token, 'POST', '/samples', '', jsonbase)
+        self.logger.debug(unicode(jsonbase))
+        self.logger.debug(unicode(replyend))
+        x = 0
+        del base[:]
+        self.sleep(71)
+
+        self.logger.error(u'Indigo iMessage wit.ai Application Created Successfully.')
+
+    def wit_deleteapp(self, access_token):
+
+        if self.debugextra:
+            self.logger.debug(u'Delete New Wit.Ai App')
+        params = {}
+        params['v'] = '20181110'
+        deletenewapp = self.witReq(access_token, 'DELETE','/apps/'+self.app_id, params, '')
+        self.logger.debug(u'Reply Delete App:'+unicode(deletenewapp))
+        #reply_dict = json.loads(createnewapp)
+        if deletenewapp.get('success')==True:
+            self.logger.info(u'Wit.Ai Indigo-iMessage App Deleted')
+
+    def wit_createapp(self, access_token):
+
+        if self.debugextra:
+            self.logger.debug(u'Create New Wit.Ai App')
+        params = {}
+        params['v'] = '20181110'
+        array = '''{"name":"Indigo-iMessage", "lang":"en","private":"true"}'''
+        createnewapp = self.witReq(access_token, 'POST','/apps',params, array)
+        self.logger.debug(u'Reply Create App:'+unicode(createnewapp))
+
+        #reply_dict = json.loads(createnewapp)
+        self.access_token= createnewapp.get('access_token')
+        self.app_id = createnewapp.get('app_id')
+        indigo.activePlugin.pluginPrefs['main_access_token'] = self.access_token
+        indigo.activePlugin.pluginPrefs['app_id']= self.app_id
+        indigo.server.savePluginPrefs()
+        self.logger.error(u'New Access Token Equals:'+unicode(self.access_token))
+        return self.access_token
+
+    def wit_getappid(self, access_token):
+# finds app and get app.id
+# returns True if app exists and self.appid is set
+# return False if no such app found
+
+        if self.debugextra:
+            self.logger.debug(u'Get App Id ')
+        params = {}
+        params['v'] = '20181110'
+        params['limit'] = '100'
+        #array = '''{"name":"Indigo-iMessage", "lang":"en","private":"true"}'''
+        getapp = self.witReq(access_token, 'GET','/apps',params, '')
+        self.logger.debug(u'Get Apps:'+unicode(getapp))
+
+        for i in getapp:
+            if i['name']== 'Indigo-iMessage':
+                self.logger.debug(u'Found App:'+i['name'])
+                self.logger.debug(u'Found App ID:'+i['id'])
+                self.app_id = i['id']
+                indigo.activePlugin.pluginPrefs['app_id']=self.app_id
+                indigo.server.savePluginPrefs()
+                return True
+        return False
+
+
+    def wit_createentity(self, access_token, entity):
+        if self.debugextra:
+            self.logger.debug(u'Create New Entity')
+        params = {}
+        params['v'] = '20181110'
+        array = '''{"doc":"Indigo '''+entity+'''", "id":"'''+entity+'''"}'''
+        self.logger.debug(u'New Entity Created:'+unicode(array))
+        createnewentity = self.witReq(access_token, 'POST','/entities', params, array)
+        self.logger.debug(u'Reply Create Entity:' + unicode(createnewentity))
+        return
+
+    def wit_deleteentity(self, access_token, entity):
+        if self.debugextra:
+            self.logger.debug(u'Create New Entity')
+        params = {}
+        params['v'] = '20181110'
+        #array = '''{"doc":"Indigo Device Name", "id":"device_name"}'''
+        self.logger.debug(u'New Entity Deleted:'+unicode(entity))
+        deletenewentity = self.witReq(access_token, 'DELETE','/entities/'+entity, params, '')
+        self.logger.debug(u'Reply Delete Entity:' + unicode(deletenewentity))
+        return
+
+##########################
 
     def logStatus(self):
 
@@ -862,7 +1142,8 @@ class Plugin(indigo.PluginBase):
 
         self.logger.info(u"{0:<30} {1}".format("Backup Directory:", self.backupfilename))
         self.logger.info(u"{0:<30} {1}".format("SQL Database Location:", self.filename))
-
+        self.logger.info(u"{0:<30} {1}".format("Wit.Ai App_id:", self.app_id))
+        self.logger.info(u"{0:<30} {1}".format("Wit.Ai Access_Code:", self.access_token))
         self.logger.info(u"{0:=^130}".format(""))
 
 
@@ -895,12 +1176,13 @@ class Plugin(indigo.PluginBase):
                         if self.debugtriggers:
                             self.logger.debug("===== Executing commandReceived Trigger %s (%d)" % (trigger.name, trigger.id))
                         indigo.trigger.execute(trigger)
-
+                        return True
+            return False
 
         except:
             if self.debugexceptions:
                 self.logger.exception(u'Exception within Trigger Check:')
             if self.debugextra:
                 self.logger.debug(u'Exception within Trigger Check')
-            return
+            return False
 
