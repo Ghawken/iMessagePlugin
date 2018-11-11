@@ -53,7 +53,19 @@
         <Label/>
         <Description>Use Wit.Ai Processing:</Description>
     </Field>
+     <Field id="wit_alldevices" type="checkbox" tooltip="Enabling will send all devices to Wit.ai.">
+        <Label/>
+        <Description>Use all Indigo Devices:</Description>
+    </Field>
 
+          <Field id="space2ae3" type="label" justify="right" fontSize="small" fontColor="black">
+    <Label>
+        Enabling this will send ALL indigo devices to Wit.Ai App
+        Disabling will only send those you have indicated with witai in Notes
+        Followed by Synonyms:
+        eg.        witai|Main Light|Main Lamp|Living Room Main Lamp
+    </Label>
+          </Field>
    <Field id="access_token" type="textfield" defaultValue="" tooltip="Witopia Access Token" dynamicreload="true">
     <Label>Access Token:</Label>
   </Field>
@@ -66,12 +78,13 @@
       </Field>
           <Field id="space2ae" type="label" fontSize="small" fontColor="black">
     <Label>
-        This will use the Access Token above to create a new Indigo iMessage App
-        This new App - will have a new access token and the above should change to reflect that
-        If wish to start from scratch - delete Wit.Ai App in Web Browser
-        This will take at least 5 minutes and possibility longer.
-        It will run in a seperate thread.
-        Once Complete - Indigo log will let you know
+        This will use the Access Token above to create a new Indigo iMessage App.
+        Do this after deleting app below - if need to update devices and if have made changes
+        This new App - will have a new access token and the below field should change to reflect that
+        This will take at least 5-10 minutes to finish and possibility longer.
+        (the wit.ai app also takes a while to finish thinking about your information provided)
+
+        It will run in a seperate thread.        Once Complete - Indigo log will let you know
     </Label>
   </Field>
    <Field id="main_access_token" type="textfield" fontColor="black" tooltip="Witopia Access Token NEW" readonly="true">

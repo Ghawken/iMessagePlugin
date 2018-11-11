@@ -18,7 +18,7 @@ import sqlite3
 import applescript
 import requests
 import json
-
+import re
 import threading
 
 try:
@@ -65,8 +65,9 @@ class Plugin(indigo.PluginBase):
         self.debugtriggers = self.pluginPrefs.get('debugtriggers', False)
         self.debugexceptions = self.pluginPrefs.get('debugexceptions', False)
         self.openStore = self.pluginPrefs.get('openStore', False)
-        self.use_witAi = self.pluginPrefs.get('use_witAi', False)
+        self.use_witAi = self.pluginPrefs.get('usewit_Ai', False)
 
+        self.wit_alldevices = self.pluginPrefs.get('wit_alldevices', False)
         self.resetLastCommand = t.time()+60
         self.next_update_check = t.time()
         self.lastCommandsent = dict()
@@ -75,7 +76,15 @@ class Plugin(indigo.PluginBase):
 #  'buddy', 'AGtorun', 'timestamp', 'iMsgConfirmed'
 
         self.messages = []
-        self.access_token = self.pluginPrefs.get('access_token','')
+
+        # if exisits use main_access_token:
+        self.main_access_token = self.pluginPrefs.get('main_access_token', '')
+        if self.main_access_token == '':
+            self.access_token = indigo.activePlugin.pluginPrefs.get('access_token', '')
+        else:
+            self.access_token = self.main_access_token
+
+
         self.app_id = self.pluginPrefs.get('app_id','')
         self.allowedBuddies = self.pluginPrefs.get('allowedBuddies','')
         self.prefServerTimeout = int(self.pluginPrefs.get('configMenuServerTimeout', "15"))
@@ -112,7 +121,8 @@ class Plugin(indigo.PluginBase):
             except:
                 self.logLevel = logging.INFO
 
-            self.use_witAi = valuesDict.get('use_witAi', False)
+            self.wit_alldevices = valuesDict.get('wit_alldevices', False)
+            self.use_witAi = valuesDict.get('usewit_Ai', False)
             self.indigo_log_handler.setLevel(self.logLevel)
             self.showBuddies = valuesDict.get('showBuddies', False)
             self.allowedBuddies = valuesDict.get('allowedBuddies', '')
@@ -121,6 +131,12 @@ class Plugin(indigo.PluginBase):
             self.logger.debug(u"User prefs saved.")
             self.logger.debug(u"Debugging on (Level: {0})".format(self.logLevel))
             self.access_token = valuesDict.get('access_token','')
+            # if exisits use main_access_token:
+            self.main_access_token = valuesDict.get('main_access_token', '')
+            if self.main_access_token == '':
+                self.access_token = valuesDict.get('access_token', '')
+            else:
+                self.access_token = self.main_access_token
 
         return True
 
@@ -492,16 +508,137 @@ class Plugin(indigo.PluginBase):
                     self.logger.debug(u'Command Sent received so deleting this message, ending.  No trigger check on this message.')
                     self.logger.debug(u'messages equals:' + unicode(messages))
             else:
-                # not recognised as trigger or affirmation/negative
-        # send to wit.ai for processing...
                 if self.use_witAi:
+                    self.resetLastCommand = t.time() + 120
                     if self.debugextra:
                         self.logger.debug(u'-- Message was not recognised - sending to Wit.Ai for processing')
                     reply = self.wit_message(val,context=None, n=None,verbose=None)
+                    messages.pop(key, None)
                     self.logger.error(unicode(reply))
-
+                    self.witai_dealwithreply(reply, key, val)
         return
 #######
+    def first_entity_value(self, entities, entity):
+        """
+        Returns first entity value
+        """
+
+        if entity not in entities:
+            return None
+        val = entities[entity][0]['value']
+        if not val:
+            return None
+        return val['value'] if isinstance(val, dict) else val
+
+    def first_entity_confidence(self, entities, entity):
+        """
+        Returns first entity confidence
+        """
+        if entity not in entities:
+            return None
+        val = entities[entity][0]['confidence']
+        if not val:
+            return None
+        return val['confidence'] if isinstance(val, dict) else val
+
+    def get_advice(self):
+        try:
+            self.logger.debug(u'get advice called')
+            joke = requests.get('https://api.adviceslip.com/advice')
+            if joke.status_code >= 200:
+                return joke.text
+            else:
+                return 'Error. This is no joke.'
+        except:
+            self.logger.exception(u'Error getting Joke.  This is no joke.')
+            return
+
+    def get_joke(self):
+        try:
+            self.logger.debug(u'get joke called')
+            joke = requests.get('https://geek-jokes.sameerkumar.website/api')
+            if joke.status_code >= 200:
+                advice = json.loads(joke.text)
+
+                return advice['slip']['advice']
+            else:
+                return 'Error. This is no advice.'
+        except:
+            self.logger.exception(u'Error getting Joke.  This is no joke.')
+            return ''
+######
+    def witai_dealwithreply(self, reply, buddy, original_message):
+        if self.debugextra:
+            self.logger.debug(u'witai reply given - sorting out now...')
+
+        if 'entities' in reply:
+            reply = reply['entities']
+        else:
+            self.logger.debug(u'No entities in reply.  ? Error from Wit.Ai:  Reply received folows:')
+            self.logger.debug(unicode(reply))
+            return
+
+
+        intent = self.first_entity_value(reply, 'intent')
+        intent_confidence = self.first_entity_confidence(reply,'intent')
+        on_off = self.first_entity_value(reply, 'on_off')
+        device_name = self.first_entity_value(reply, 'device_name')
+        number = self.first_entity_value(reply, 'number')
+
+
+
+        if intent:
+            self.logger.error(u'Intent:' + unicode(intent) + u' and confidence:' + unicode(intent_confidence))
+            if intent=='device_action' and float(intent_confidence)>0.85:
+                self.logger.debug(u'Intent:' + unicode(intent))
+                if device_name is None:
+                    self.logger.debug(u'Unsure as to which Device to act on.')
+                    self.as_sendmessage(buddy, 'Sorry not sure which Device to act on.  Nothing done.')
+                    return
+                else:
+                    self.logger.debug(u'Acting on Device:'+unicode(device_name))
+                    devicetoaction = device_name
+                    #confidence = device_name['confidence']
+                if on_off is None:
+                    self.logger.debug(u'Unsure as to whether to turn On or Turn Off.')
+                    self.as_sendmessage(buddy, 'Sorry not sure what to do Device :'+devicetoaction)
+                    return
+                else:
+                    self.logger.debug(u'On_Off action equals:'+unicode(on_off))
+                    on_off_value = on_off  # either string on or off
+                # okay, now have confirmed devicename, and on_off just need to act.
+                if on_off_value == 'on':
+                    self.logger.debug(u'Action: Action: Turning on:' + devicetoaction)
+                    indigo.device.turnOn(devicetoaction)
+                    self.as_sendmessage(buddy, 'Turning on device:' + devicetoaction)
+                    return
+                elif on_off_value == 'off':
+                    self.logger.debug(u'Action: Action: Turning off:' + devicetoaction)
+                    indigo.device.turnOff(devicetoaction)
+                    self.as_sendmessage(buddy, 'Turning off device:' + devicetoaction)
+                    return
+                elif on_off_value == 'toggle':
+                    self.logger.debug(u'Action: Action: Toggling:' + devicetoaction)
+                    indigo.device.toggle(devicetoaction)
+                    self.as_sendmessage(buddy, 'Turning off device:' + devicetoaction)
+                    return
+                else:
+                    self.logger.debug(u'witAI Action: on_off not recognised.')
+                    self.as_sendmessage(buddy, 'Command not recognised:' + devicetoaction)
+            if intent=='joke' and float(intent_confidence)>0.50:
+                self.logger.debug(u'Telling a joke....')
+                joke = self.get_joke()
+                joke = re.sub (r'([^a-zA-Z ]+?)', '', joke)
+                self.as_sendmessage(buddy, str(joke) )
+                return
+            if intent=='advice' and float(intent_confidence)>0.50:
+                self.logger.debug(u'Giving some advice....')
+                advice = self.get_advice()
+                advice = re.sub (r'([^a-zA-Z ]+?)', '', advice)
+                self.as_sendmessage(buddy, str(advice) )
+                return
+
+
     #
     def checkanswer(self, buddyHandle, message, sublist):
         if self.debugextra:
@@ -855,6 +992,7 @@ class Plugin(indigo.PluginBase):
             self.indigo_log_handler.setLevel(self.logLevel)
 ##################
     def witReq(self, access_token, meth, path, params, body, **kwargs):
+        # type: (object, object, object, object, object, object) -> object
         WIT_API_HOST = 'https://api.wit.ai'
         WIT_API_VERSION =  '20170307'
         full_url = WIT_API_HOST + path
@@ -866,6 +1004,7 @@ class Plugin(indigo.PluginBase):
             'accept': 'application/vnd.wit.' + WIT_API_VERSION + '+json'
         }
         headers.update(kwargs.pop('headers', {}))
+
         rsp = requests.request(
             meth,
             full_url,
@@ -878,8 +1017,10 @@ class Plugin(indigo.PluginBase):
             self.logger.error(u'Wit responded with status: ' + unicode(rsp.status_code) +
                            ' (' + unicode(rsp.reason)  + ')')
         json = rsp.json()
+
         if 'error' in json:
             self.logger.error(u'Wit responded with an error: ' + json['error'])
+
         self.logger.debug('%s %s %s', meth, full_url, json)
         return json
 
@@ -893,24 +1034,30 @@ class Plugin(indigo.PluginBase):
             params['q'] = msg
         if context:
             params['context'] = json.dumps(context)
-        resp = self.witReq(self.logger, self.access_token, 'GET', '/message', params)
+
+        resp = self.witReq(self.access_token, 'GET', '/message', params, '')
+        self.logger.debug(u'Acess_Token Used:'+self.access_token)
+        self.logger.debug(u'wit_message: '+unicode(resp))
         return resp
 
     def wit_ThreadCreate(self, valuesDict):
         if self.debugextra:
             self.logger.debug(u'Thread Create Wit.ai App Started..')
         self.myThread = threading.Thread(target=self.witaitesting, args=())
-        self.myThread.daemon = True
+        #self.myThread.daemon = True
         self.myThread.start()
 
     def wit_Delete(self, valuesDict):
+
         if self.debugextra:
             self.logger.debug(u'Thread Delete Wit.ai App Started..')
-        main_access_token = indigo.activePlugin.pluginPrefs.get('main_access_token','')
-        if main_access_token == '':
+
+        self.main_access_token = indigo.activePlugin.pluginPrefs.get('main_access_token','')
+
+        if self.main_access_token == '':
             self.access_token = indigo.activePlugin.pluginPrefs.get('access_token','')
         else:
-            self.access_token = main_access_token
+            self.access_token = self.main_access_token
 
         checkappexists = self.wit_getappid(self.access_token)
         if checkappexists == False:
@@ -931,11 +1078,12 @@ class Plugin(indigo.PluginBase):
             self.logger.debug(u'Wit.Ai test called')
 
         # create new wit.ai app
-        main_access_token = self.pluginPrefs.get('main_access_token','')
-        if main_access_token == '':
+        self.main_access_token = self.pluginPrefs.get('main_access_token','')
+
+        if self.main_access_token == '':
             self.access_token = indigo.activePlugin.pluginPrefs.get('access_token','')
         else:
-            self.access_token = main_access_token
+            self.access_token = self.main_access_token
 
         # check apps
         checkappexists = self.wit_getappid(self.access_token)
@@ -946,93 +1094,224 @@ class Plugin(indigo.PluginBase):
             indigo.activePlugin.pluginPrefs['main_access_token'] = self.access_token
             indigo.server.savePluginPrefs()
             self.wit_createentity(self.access_token, 'device_name')
-            self.wit_createentity(self.access_token, 'address')
-
         base =[]
         lookup = '{"lookups":["free-text", "keywords"]}'
         #self.wit_deleteentity(self.access_token,'device_name')
         #self.wit_deleteentity(self.access_token,'intent')
-
-
         params = {}
         params['v'] = '20170307'
         entityput = self.witReq(self.access_token, 'PUT', '/entities/device_name', params, lookup)
         self.logger.debug(unicode(entityput))
-        self.sleep(5)
-
+        t.sleep(15)
 
         array2 = '''{"doc":"Indigo device_name","lookups":["free-text","keywords"],"values":['''
         #array2 = '''{"values":['''
         x=0
+        synomynarray = []
 
         for device in indigo.devices.itervalues():
+            if self.wit_alldevices:
+                description = str(device.description)
+                if description != '' and description.startswith('witai'):
+                    # okay - just grab the first line
+                    #self.logger.debug(u'Description: String result found:'+unicode(description))
+                    description = description.split('\n',1)[0]
+                    # firstline, now remove witai
+                    #self.logger.debug(u'Description: First Line only:'+unicode(description))
+                    description = description[6:]
+                    #self.logger.debug(u'Description: New Description equals:'+unicode(description))
+                    # now break up by seperating on | characters
+                    synomynarray = description.split('|')
+                    #self.logger.debug(u'Description: Array now equals:'+unicode(synomynarray))
 
-            devicename = str(device.name)
-            array2 = array2 + '''{"value":"'''+devicename+'''","expressions":["'''+devicename+'''"],"metadata" :  "''' + str(device.id) + '''"},'''
+                devicename = str(device.name)
+                array2 = array2 + '''{"value":"'''+devicename+'''","expressions":["'''+devicename+'''",'''
+                if synomynarray:   # not empty
+                    for synomyn in synomynarray:
+                        array2 = array2 + '''"''' + synomyn + '''",'''
+
+
+                    del synomynarray[:]
+                array2 = array2[:-1]
+                array2 = array2 + '''],"metadata" :  "''' + str(device.id) + '''"},'''
+
+            else:
+                description = str(device.description)
+                if description != '' and description.startswith('witai'):
+                    # okay - just grab the first line
+                    #self.logger.debug(u'Description: String result found:' + unicode(description))
+                    description = description.split('\n', 1)[0]
+                    # firstline, now remove witai
+                    #self.logger.debug(u'Description: First Line only:' + unicode(description))
+                    description = description[6:]
+                    #self.logger.debug(u'Description: New Description equals:' + unicode(description))
+                    # now break up by seperating on | characters
+                    synomynarray = description.split('|')
+                    #.logger.debug(u'Description: Array now equals:' + unicode(synomynarray))
+
+                    devicename = str(device.name)
+                    array2 = array2 + '''{"value":"''' + devicename + '''","expressions":["''' + devicename + '''",'''
+                    if synomynarray:  # not empty
+                        for synomyn in synomynarray:
+                            array2 = array2 + '''"''' + synomyn + '''",'''
+
+                        del synomynarray[:]
+                    array2 = array2[:-1]
+                    array2 = array2 + '''],"metadata" :  "''' + str(device.id) + '''"},'''
+
+
         array2 = array2[:-1] + ']}'
-
         #array2 = json.dumps(array2)
         self.logger.debug(unicode(array2))
+
         params = {}
         params['v'] = '20181110'
         entityput = self.witReq(self.access_token, 'PUT', '/entities/device_name', params, array2)
         self.logger.debug(unicode(entityput))
 
+        t.sleep(10)
+
         for device in indigo.devices.itervalues():
-            if hasattr(device, "displayStateValRaw") and device.displayStateValRaw in ['0',False,True] :
-                x=x+4
-                devicename = str(device.name)
-                array = '''{"text":"Turn on '''+ devicename +'''","entities":[{"entity":"wit$on_off","value":"true"},{"entity":"device_name","value":"'''+devicename+'''"}]}'''
-                base.append(json.loads(array))
-                array = '''{"text":"'''+ devicename +''' on","entities":[{"entity":"wit$on_off","value":"true"},{"entity":"device_name","value":"'''+devicename+'''"}]}'''
-                base.append(json.loads(array))
-                array = '''{"text":"Turn off '''+ devicename +'''","entities":[{"entity":"wit$on_off","value":"false"},{"entity":"device_name","value":"'''+devicename+'''"}]}'''
-                base.append(json.loads(array))
-                array = '''{"text":"'''+ devicename +''' off","entities":[{"entity":"wit$on_off","value":"false"},{"entity":"device_name","value":"'''+devicename+'''"}]}'''
-                base.append(json.loads(array))
-            if 'temperature' in device.states or 'Temperature' in device.states:
-                x=x+4
-                devicename = str(device.name)
-                array = '''{"text":"What is the temperature of the ''' + devicename + '''","entities":[{"entity":"intent","value":"temperature"},{"entity":"device_name","value":"''' + devicename + '''"}]}'''
-                base.append(json.loads(array))
-                array = '''{"text":"Tell me the temperature of the ''' + devicename + '''","entities":[{"entity":"intent","value":"temperature"},{"entity":"device_name","value":"''' + devicename + '''"}]}'''
-                base.append(json.loads(array))
-                array = '''{"text":"''' + devicename + ''' temperature? ","entities":[{"entity":"intent","value":"temperature"},{"entity":"device_name","value":"''' + devicename + '''"}]}'''
-                base.append(json.loads(array))
-                array = '''{"text":"How hot is ''' + devicename + '''","entities":[{"entity":"intent","value":"temperature"},{"entity":"device_name","value":"''' + devicename + '''"}]}'''
-                base.append(json.loads(array))
-            if device.pluginId == 'com.GlennNZ.indigoplugin.FindFriendsMini' and device.model =='FindFriends Device':
-                x=x+2
-                devicename = str(device.name)
-                address = device.states['address']
-                array = '''{"text":"Where is ''' + devicename + '''","entities":[{"entity":"intent","value":"location"},{"entity":"device_name","value":"''' + devicename + '''"},{"entity":"address","value":"''' + address + '''"}]}'''
-                base.append(json.loads(array))
-                array = '''{"text":"Locate ''' + devicename + '''","entities":[{"entity":"intent","value":"location"},{"entity":"device_name","value":"''' + devicename + '''"},{"entity":"address","value":"''' + address + '''"}]}'''
-                base.append(json.loads(array))
-            if 'brightnessLevel' in device.states:
-                x = x + 6
-                devicename = str(device.name)
-                array = '''{"text":"Dim ''' + devicename + ''' to 10%","entities":[{"entity":"intent","value":"dim_set"},{"entity":"device_name","value":"''' + devicename + '''"},{"entity":"wit$number","value":"10"}]}'''
-                base.append(json.loads(array))
-                array = '''{"text":"Set ''' + devicename + ''' to 10% dim","entities":[{"entity":"intent","value":"dim_set"},{"entity":"device_name","value":"''' + devicename + '''"},{"entity":"wit$number","value":"10"}]}'''
-                base.append(json.loads(array))
-                array = '''{"text":"Dim ''' + devicename + ''' to 60%","entities":[{"entity":"intent","value":"dim_set"},{"entity":"device_name","value":"''' + devicename + '''"},{"entity":"wit$number","value":"60"}]}'''
-                base.append(json.loads(array))
-                array = '''{"text":"Set ''' + devicename + ''' to 60% brightness","entities":[{"entity":"intent","value":"dim_set"},{"entity":"device_name","value":"''' + devicename + '''"},{"entity":"wit$number","value":"60"}]}'''
-                base.append(json.loads(array))
-                array = '''{"text":"Set ''' + devicename + ''' to 10% brightness","entities":[{"entity":"intent","value":"dim_set"},{"entity":"device_name","value":"''' + devicename + '''"},{"entity":"wit$number","value":"10"}]}'''
-                base.append(json.loads(array))
+            if self.wit_alldevices:
+                self.logger.debug(u'Okay - sending all device details to help with parsing...')
+                if hasattr(device, "displayStateValRaw") and device.displayStateValRaw in ['0',False,True] :
+                    x=x+4
+                    devicename = str(device.name)
+                    array = '''{"text":"Turn on '''+ devicename +'''","entities":[{"entity":"intent","value":"device_action"},{"entity":"wit$on_off","value":"true"},{"entity":"device_name","value":"'''+devicename+'''"}]}'''
+                    base.append(json.loads(array))
+                    array = '''{"text":"'''+ devicename +''' on","entities":[{"entity":"intent","value":"device_action"},{"entity":"wit$on_off","value":"true"},{"entity":"device_name","value":"'''+devicename+'''"}]}'''
+                    base.append(json.loads(array))
+                    array = '''{"text":"Turn off '''+ devicename +'''","entities":[{"entity":"intent","value":"device_action"},{"entity":"wit$on_off","value":"false"},{"entity":"device_name","value":"'''+devicename+'''"}]}'''
+                    base.append(json.loads(array))
+                    array = '''{"text":"'''+ devicename +''' off","entities":[{"entity":"intent","value":"device_action"},{"entity":"wit$on_off","value":"false"},{"entity":"device_name","value":"'''+devicename+'''"}]}'''
+                    base.append(json.loads(array))
+                if 'temperature' in device.states or 'Temperature' in device.states:
+                    x=x+4
+                    devicename = str(device.name)
+                    array = '''{"text":"What is the temperature of the ''' + devicename + '''","entities":[{"entity":"intent","value":"temperature"},{"entity":"device_name","value":"''' + devicename + '''"}]}'''
+                    base.append(json.loads(array))
+                    array = '''{"text":"Tell me the temperature of the ''' + devicename + '''","entities":[{"entity":"intent","value":"temperature"},{"entity":"device_name","value":"''' + devicename + '''"}]}'''
+                    base.append(json.loads(array))
+                    array = '''{"text":"''' + devicename + ''' temperature? ","entities":[{"entity":"intent","value":"temperature"},{"entity":"device_name","value":"''' + devicename + '''"}]}'''
+                    base.append(json.loads(array))
+                    array = '''{"text":"How hot is ''' + devicename + '''","entities":[{"entity":"intent","value":"temperature"},{"entity":"device_name","value":"''' + devicename + '''"}]}'''
+                    base.append(json.loads(array))
+                if device.pluginId == 'com.GlennNZ.indigoplugin.FindFriendsMini' and device.model =='FindFriends Device':
+                    x=x+2
+                    devicename = str(device.name)
+                    address = device.states['address']
+                    array = '''{"text":"Where is ''' + devicename + '''","entities":[{"entity":"intent","value":"location"},{"entity":"device_name","value":"''' + devicename + '''"}]}'''
+                    base.append(json.loads(array))
+                    array = '''{"text":"Locate ''' + devicename + '''","entities":[{"entity":"intent","value":"location"},{"entity":"device_name","value":"''' + devicename + '''"}]}'''
+                    base.append(json.loads(array))
+                if 'brightnessLevel' in device.states:
+                    x = x + 6
+                    devicename = str(device.name)
+                    array = '''{"text":"Dim ''' + devicename + ''' to 10%","entities":[{"entity":"intent","value":"dim_set"},{"entity":"device_name","value":"''' + devicename + '''"},{"entity":"wit$number","value":"10"}]}'''
+                    base.append(json.loads(array))
+                    array = '''{"text":"Set ''' + devicename + ''' to 10% dim","entities":[{"entity":"intent","value":"dim_set"},{"entity":"device_name","value":"''' + devicename + '''"},{"entity":"wit$number","value":"10"}]}'''
+                    base.append(json.loads(array))
+                    array = '''{"text":"Dim ''' + devicename + ''' to 60%","entities":[{"entity":"intent","value":"dim_set"},{"entity":"device_name","value":"''' + devicename + '''"},{"entity":"wit$number","value":"60"}]}'''
+                    base.append(json.loads(array))
+                    array = '''{"text":"Set ''' + devicename + ''' to 60% brightness","entities":[{"entity":"intent","value":"dim_set"},{"entity":"device_name","value":"''' + devicename + '''"},{"entity":"wit$number","value":"60"}]}'''
+                    base.append(json.loads(array))
+                    array = '''{"text":"Set ''' + devicename + ''' to 10% brightness","entities":[{"entity":"intent","value":"dim_set"},{"entity":"device_name","value":"''' + devicename + '''"},{"entity":"wit$number","value":"10"}]}'''
+                    base.append(json.loads(array))
 
+                if x > 185:
+                    jsonbase = json.dumps(base)
+                    replyend = self.witReq(self.access_token, 'POST', '/samples', '', jsonbase)
+                    self.logger.debug(unicode(jsonbase))
+                    self.logger.debug(unicode(replyend))
+                    x = 0
+                    del base[:]
+                    self.sleep(71)
+            else:
+                description = str(device.description)
+                if description != '' and description.startswith('witai'):
+                    x = x + 4
+                    devicename = str(device.name)
+                    array = '''{"text":"Turn on ''' + devicename + '''","entities":[{"entity":"intent","value":"device_action"},{"entity":"wit$on_off","value":"true"},{"entity":"device_name","value":"''' + devicename + '''"}]}'''
+                    base.append(json.loads(array))
+                    array = '''{"text":"''' + devicename + ''' on","entities":[{"entity":"intent","value":"device_action"},{"entity":"wit$on_off","value":"true"},{"entity":"device_name","value":"''' + devicename + '''"}]}'''
+                    base.append(json.loads(array))
+                    array = '''{"text":"Turn off ''' + devicename + '''","entities":[{"entity":"intent","value":"device_action"},{"entity":"wit$on_off","value":"false"},{"entity":"device_name","value":"''' + devicename + '''"}]}'''
+                    base.append(json.loads(array))
+                    array = '''{"text":"''' + devicename + ''' off","entities":[{"entity":"intent","value":"device_action"},{"entity":"wit$on_off","value":"false"},{"entity":"device_name","value":"''' + devicename + '''"}]}'''
+                    base.append(json.loads(array))
 
-            if x > 185:
-                jsonbase = json.dumps(base)
-                replyend = self.witReq(self.access_token, 'POST', '/samples', '', jsonbase)
-                self.logger.debug(unicode(jsonbase))
-                self.logger.debug(unicode(replyend))
-                x = 0
-                del base[:]
-                self.sleep(71)
+                    if 'temperature' in device.states or 'Temperature' in device.states:
+                        x = x + 4
+                        devicename = str(device.name)
+                        array = '''{"text":"What is the temperature of the ''' + devicename + '''","entities":[{"entity":"intent","value":"temperature"},{"entity":"device_name","value":"''' + devicename + '''"}]}'''
+                        base.append(json.loads(array))
+                        array = '''{"text":"Tell me the temperature of the ''' + devicename + '''","entities":[{"entity":"intent","value":"temperature"},{"entity":"device_name","value":"''' + devicename + '''"}]}'''
+                        base.append(json.loads(array))
+                        array = '''{"text":"''' + devicename + ''' temperature? ","entities":[{"entity":"intent","value":"temperature"},{"entity":"device_name","value":"''' + devicename + '''"}]}'''
+                        base.append(json.loads(array))
+                        array = '''{"text":"How hot is ''' + devicename + '''","entities":[{"entity":"intent","value":"temperature"},{"entity":"device_name","value":"''' + devicename + '''"}]}'''
+                        base.append(json.loads(array))
+                    if device.pluginId == 'com.GlennNZ.indigoplugin.FindFriendsMini' and device.model == 'FindFriends Device':
+                        x = x + 2
+                        devicename = str(device.name)
+                        address = device.states['address']
+                        array = '''{"text":"Where is ''' + devicename + '''","entities":[{"entity":"intent","value":"location"},{"entity":"device_name","value":"''' + devicename + '''"}]}'''
+                        base.append(json.loads(array))
+                        array = '''{"text":"Locate ''' + devicename + '''","entities":[{"entity":"intent","value":"location"},{"entity":"device_name","value":"''' + devicename + '''"}]}'''
+                        base.append(json.loads(array))
+                    if 'brightnessLevel' in device.states:
+                        x = x + 6
+                        devicename = str(device.name)
+                        array = '''{"text":"Dim ''' + devicename + ''' to 10%","entities":[{"entity":"intent","value":"dim_set"},{"entity":"device_name","value":"''' + devicename + '''"},{"entity":"wit$number","value":"10"}]}'''
+                        base.append(json.loads(array))
+                        array = '''{"text":"Set ''' + devicename + ''' to 10% dim","entities":[{"entity":"intent","value":"dim_set"},{"entity":"device_name","value":"''' + devicename + '''"},{"entity":"wit$number","value":"10"}]}'''
+                        base.append(json.loads(array))
+                        array = '''{"text":"Dim ''' + devicename + ''' to 60%","entities":[{"entity":"intent","value":"dim_set"},{"entity":"device_name","value":"''' + devicename + '''"},{"entity":"wit$number","value":"60"}]}'''
+                        base.append(json.loads(array))
+                        array = '''{"text":"Set ''' + devicename + ''' to 60% brightness","entities":[{"entity":"intent","value":"dim_set"},{"entity":"device_name","value":"''' + devicename + '''"},{"entity":"wit$number","value":"60"}]}'''
+                        base.append(json.loads(array))
+                        array = '''{"text":"Set ''' + devicename + ''' to 10% brightness","entities":[{"entity":"intent","value":"dim_set"},{"entity":"device_name","value":"''' + devicename + '''"},{"entity":"wit$number","value":"10"}]}'''
+                        base.append(json.loads(array))
+
+                if x > 185:
+                    jsonbase = json.dumps(base)
+                    replyend = self.witReq(self.access_token, 'POST', '/samples', '', jsonbase)
+                    self.logger.debug(unicode(jsonbase))
+                    self.logger.debug(unicode(replyend))
+                    x = 0
+                    del base[:]
+                    self.sleep(71)
+
         # and load again at end in case never make it to 195 samples
+        jsonbase = json.dumps(base)
+        replyend = self.witReq(self.access_token, 'POST', '/samples', '', jsonbase)
+        self.logger.debug(unicode(jsonbase))
+        self.logger.debug(unicode(replyend))
+        x = 0
+        del base[:]
+        self.sleep(71)
+
+        ## manual samples here
+        array = '''{"text":"Tell me a joke","entities":[{"entity":"intent","value":"joke"}]}'''
+        base.append(json.loads(array))
+        array = '''{"text":"Do you know any good jokes?","entities":[{"entity":"intent","value":"joke"}]}'''
+        base.append(json.loads(array))
+        array = '''{"text":"Please tell me a funny joke?","entities":[{"entity":"intent","value":"joke"}]}'''
+        base.append(json.loads(array))
+
+        array = '''{"text":"Tell me some good advice","entities":[{"entity":"intent","value":"advice"}]}'''
+        base.append(json.loads(array))
+        array = '''{"text":"Do you know any good advice for me?","entities":[{"entity":"intent","value":"advice"}]}'''
+        base.append(json.loads(array))
+        array = '''{"text":"Can you help with some advice?","entities":[{"entity":"intent","value":"advice"}]}'''
+        base.append(json.loads(array))
+
+        array = '''{"text":"Hello","entities":[{"entity":"intent","value":"greeting"}]}'''
+        base.append(json.loads(array))
+        array = '''{"text":"Hi, how are you?","entities":[{"entity":"intent","value":"greeting"}]}'''
+        base.append(json.loads(array))
+        array = '''{"text":"What is up?","entities":[{"entity":"intent","value":"greeting"}]}'''
+        base.append(json.loads(array))
         jsonbase = json.dumps(base)
         replyend = self.witReq(self.access_token, 'POST', '/samples', '', jsonbase)
         self.logger.debug(unicode(jsonbase))
@@ -1067,6 +1346,7 @@ class Plugin(indigo.PluginBase):
 
         #reply_dict = json.loads(createnewapp)
         self.access_token= createnewapp.get('access_token')
+        self.main_access_token = self.access_token
         self.app_id = createnewapp.get('app_id')
         indigo.activePlugin.pluginPrefs['main_access_token'] = self.access_token
         indigo.activePlugin.pluginPrefs['app_id']= self.app_id
@@ -1177,6 +1457,7 @@ class Plugin(indigo.PluginBase):
                             self.logger.debug("===== Executing commandReceived Trigger %s (%d)" % (trigger.name, trigger.id))
                         indigo.trigger.execute(trigger)
                         return True
+
             return False
 
         except:
