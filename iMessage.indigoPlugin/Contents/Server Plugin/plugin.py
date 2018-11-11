@@ -280,13 +280,34 @@ class Plugin(indigo.PluginBase):
             if self.debugextra:
                 self.logger.debug(u'Error in Close Sql - Probably was not connected')
 
+    def sql_fetchattachments(self):
+        # if self.debugextra:
+        #     self.debugLog(u"fetch messages() method called.")
+        cursor = self.connection.cursor()
+
+        sqlcommand = '''
+SELECT attachmentT.filename FROM message messageT INNER JOIN attachment attachmentT INNER JOIN message_attachment_join meAtJoinT ON attachmentT.ROWID= meAtJoinT.attachment_id WHERE meAtJoinT.message_id=messageT.ROWID
+AND datetime(messageT.date/1000000000 + strftime("%s", "2001-01-01") ,"unixepoch","localtime") >= datetime('now','-120 seconds', 'localtime');     
+                   '''
+
+        cursor.execute(sqlcommand)
+        result = cursor.fetchall()
+
+        if not result:  # list is empty return empty dict
+            return None
+        else:
+            if self.debugextra:
+                self.logger.debug(u'sql_fetchattachments: Not empty return:' + unicode(result))
+        self.logger.debug(u'SQL_Attachments found: Results:'+unicode(result))
+        return result
+
     def sql_fetchmessages(self):
        # if self.debugextra:
        #     self.debugLog(u"fetch messages() method called.")
         cursor = self.connection.cursor()
 
         sqlcommand = '''
-           SELECT handle.id, message.text 
+           SELECT handle.id, message.text, message.is_audio_message
              FROM message INNER JOIN handle 
              ON message.handle_id = handle.ROWID 
              WHERE is_from_me=0 AND 
@@ -307,18 +328,30 @@ class Plugin(indigo.PluginBase):
         #     '''
         cursor.execute(sqlcommand)
         result = cursor.fetchall()
-
-
         if not result:  # list is empty return empty dict
             return dict()
         else:
             if self.debugextra:
                 self.logger.debug(u'sql_fetchmessages: Not empty return:' + unicode(result))
-            newmessages = [item for sublist in result for item in sublist]
+
+            newlist = []
+            for items in result:
+                if items[2]==1:
+                    self.logger.debug(u'Must be audio file...')
+                    newtuple = items[0], 'AUDIOFILE'
+                    newlist.append(newtuple)
+                else:
+                    newtuple = items[0], items[1]
+                    newlist.append(newtuple)
+
+            self.logger.debug(u'newlist after checking audio file:'+unicode(newlist))
+
+            newmessages = [item for sublist in newlist for item in sublist]
             if self.debugextra:
                 self.logger.debug(u'Flatten Messages first:')
                 self.logger.debug(unicode(newmessages))
                 self.logger.debug(u'Then convert to Dict:')
+
             newmessagesdict = dict(zip(*[iter(newmessages)] * 2))
 
             if self.debugextra:
@@ -509,13 +542,28 @@ class Plugin(indigo.PluginBase):
                     self.logger.debug(u'messages equals:' + unicode(messages))
             else:
                 if self.use_witAi:
-                    self.resetLastCommand = t.time() + 120
-                    if self.debugextra:
-                        self.logger.debug(u'-- Message was not recognised - sending to Wit.Ai for processing')
-                    reply = self.wit_message(val,context=None, n=None,verbose=None)
-                    messages.pop(key, None)
-                    self.logger.error(unicode(reply))
-                    self.witai_dealwithreply(reply, key, val)
+                    if val == 'AUDIOFILE':
+                        self.logger.error(u'AUDIOFILE recognised.  finding Attachment')
+                        filepath = self.sql_fetchattachments()
+                        file_touse = [item for sublist in filepath for item in sublist]
+                        self.logger.error(u'filepath:'+unicode(file_touse[-1]))
+                        file_touse = file_touse[-1]  # last item in list
+                        file_touse = os.path.expanduser(file_touse)
+                        self.logger.error(u'Expanded FilePath:'+unicode(file_touse))
+                        resp = None
+
+                        with open(file_touse,'rb') as f:
+                            resp = self.wit_speech(f, None, {'Content-Type': 'audio/raw;encoding=floating-point;bits=16;rate=8000;endian=big'})
+                        self.logger.error(unicode(resp))
+                        messages.pop(key, None)
+                    else:
+                        self.resetLastCommand = t.time() + 120
+                        if self.debugextra:
+                            self.logger.debug(u'-- Message was not recognised as Trigger - sending to Wit.Ai for processing --')
+                        reply = self.wit_message(val,context=None, n=None,verbose=None)
+                        messages.pop(key, None)
+                        self.logger.debug(unicode(reply))
+                        self.witai_dealwithreply(reply, key, val)
         return
 #######
     def first_entity_value(self, entities, entity):
@@ -546,9 +594,10 @@ class Plugin(indigo.PluginBase):
             self.logger.debug(u'get advice called')
             joke = requests.get('https://api.adviceslip.com/advice')
             if joke.status_code >= 200:
-                return joke.text
+                advice = json.loads(joke.text)
+                return advice['slip']['advice']
             else:
-                return 'Error. This is no joke.'
+                return 'Error. This is no advice.'
         except:
             self.logger.exception(u'Error getting Joke.  This is no joke.')
             return
@@ -558,11 +607,9 @@ class Plugin(indigo.PluginBase):
             self.logger.debug(u'get joke called')
             joke = requests.get('https://geek-jokes.sameerkumar.website/api')
             if joke.status_code >= 200:
-                advice = json.loads(joke.text)
-
-                return advice['slip']['advice']
+                return joke.text
             else:
-                return 'Error. This is no advice.'
+                return 'Error. This is no joke.'
         except:
             self.logger.exception(u'Error getting Joke.  This is no joke.')
             return ''
@@ -588,7 +635,7 @@ class Plugin(indigo.PluginBase):
 
 
         if intent:
-            self.logger.error(u'Intent:' + unicode(intent) + u' and confidence:' + unicode(intent_confidence))
+            self.logger.debug(u'Intent:' + unicode(intent) + u' and confidence:' + unicode(intent_confidence))
             if intent=='device_action' and float(intent_confidence)>0.85:
                 self.logger.debug(u'Intent:' + unicode(intent))
                 if device_name is None:
@@ -997,7 +1044,6 @@ class Plugin(indigo.PluginBase):
         WIT_API_VERSION =  '20170307'
         full_url = WIT_API_HOST + path
         DEFAULT_MAX_STEPS = 5
-
         self.logger.debug('%s %s %s', meth, full_url, params)
         headers = {
             'authorization': 'Bearer ' + access_token,
@@ -1011,6 +1057,37 @@ class Plugin(indigo.PluginBase):
             headers=headers,
             params=params,
             data=body,
+            **kwargs
+        )
+        if rsp.status_code > 200:
+            self.logger.error(u'Wit responded with status: ' + unicode(rsp.status_code) +
+                           ' (' + unicode(rsp.reason)  + ')')
+        json = rsp.json()
+
+        if 'error' in json:
+            self.logger.error(u'Wit responded with an error: ' + json['error'])
+
+        self.logger.debug('%s %s %s', meth, full_url, json)
+        return json
+
+    def witReqSpeech(self, access_token, meth, path, params,  **kwargs):
+        # type: (object, object, object, object, object, object) -> object
+        WIT_API_HOST = 'https://api.wit.ai'
+        WIT_API_VERSION =  '20170307'
+        full_url = WIT_API_HOST + path
+        DEFAULT_MAX_STEPS = 5
+        self.logger.debug('%s %s %s', meth, full_url, params)
+        headers = {
+            'authorization': 'Bearer ' + access_token,
+            'accept': 'application/vnd.wit.' + WIT_API_VERSION + '+json'
+        }
+        headers.update(kwargs.pop('headers', {}))
+
+        rsp = requests.request(
+            meth,
+            full_url,
+            headers=headers,
+            params=params,
             **kwargs
         )
         if rsp.status_code > 200:
@@ -1039,6 +1116,30 @@ class Plugin(indigo.PluginBase):
         self.logger.debug(u'Acess_Token Used:'+self.access_token)
         self.logger.debug(u'wit_message: '+unicode(resp))
         return resp
+
+
+    def wit_speech(self, audio_file, verbose=None, headers=None):
+        """ Sends an audio file to the /speech API.
+        Uses the streaming feature of requests (see `req`), so opening the file
+        in binary mode is strongly reccomended (see
+        http://docs.python-requests.org/en/master/user/advanced/#streaming-uploads).
+        Add Content-Type header as specified here: https://wit.ai/docs/http/20160526#post--speech-link
+        :param audio_file: an open handler to an audio file
+        :param verbose:
+        :param headers: an optional dictionary with request headers
+        :return:
+        """
+        params = {}
+        headers = headers or {}
+        if verbose:
+            params['verbose'] = True
+        resp = self.witReqSpeech(self.access_token, 'POST', '/speech', params,
+                   data=audio_file, headers=headers)
+        self.logger.debug(u'Acess_Token Used:'+self.access_token)
+        self.logger.debug(u'wit_speech: '+unicode(resp))
+
+        return resp
+
 
     def wit_ThreadCreate(self, valuesDict):
         if self.debugextra:
@@ -1299,9 +1400,9 @@ class Plugin(indigo.PluginBase):
         array = '''{"text":"Please tell me a funny joke?","entities":[{"entity":"intent","value":"joke"}]}'''
         base.append(json.loads(array))
 
-        array = '''{"text":"Tell me some good advice","entities":[{"entity":"intent","value":"advice"}]}'''
+        array = '''{"text":"Can you give me some advice","entities":[{"entity":"intent","value":"advice"}]}'''
         base.append(json.loads(array))
-        array = '''{"text":"Do you know any good advice for me?","entities":[{"entity":"intent","value":"advice"}]}'''
+        array = '''{"text":"Do you have any advice for me?","entities":[{"entity":"intent","value":"advice"}]}'''
         base.append(json.loads(array))
         array = '''{"text":"Can you help with some advice?","entities":[{"entity":"intent","value":"advice"}]}'''
         base.append(json.loads(array))
