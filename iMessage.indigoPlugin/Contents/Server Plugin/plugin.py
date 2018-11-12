@@ -694,6 +694,22 @@ AND datetime(messageT.date/1000000000 + strftime("%s", "2001-01-01") ,"unixepoch
         except:
             self.logger.exception(u'Error getting Joke.  This is no joke.')
             return ''
+
+    def return_insult(self):
+        try:
+            self.logger.debug(u'get Insult called')
+            joke = requests.get('http://www.dickless.org/api/insult.xml')
+            # xml file - short just pull text inbetween
+
+            if joke.status_code >= 200:
+                insult = re.search('<insult>(.*)</insult>', joke.text)
+                return insult.group(1)
+            else:
+                return 'Error. This is no joke.'
+        except:
+            self.logger.exception(u'Error getting Insult.  This is no joke.')
+            return ''
+
 ######
     def witai_dealwithreply(self, reply, buddy, original_message):
         if self.debugextra:
@@ -749,6 +765,11 @@ AND datetime(messageT.date/1000000000 + strftime("%s", "2001-01-01") ,"unixepoch
                 else:
                     self.logger.debug(u'witAI Action: on_off not recognised.')
                     self.as_sendmessage(buddy, 'Command not recognised:' + devicetoaction)
+            if intent =='insult' and float(intent_confidence)>0.50:
+                self.logger.debug(u'Plugin has just been insulted...')
+                insult = self.return_insult()
+                self.as_sendmessage(buddy, str(insult))
+                return
             if intent=='joke' and float(intent_confidence)>0.50:
                 self.logger.debug(u'Telling a joke....')
                 joke = self.get_joke()
@@ -1672,6 +1693,19 @@ AND datetime(messageT.date/1000000000 + strftime("%s", "2001-01-01") ,"unixepoch
         array = '''{"text":"Should I really do this?","entities":[{"entity":"intent","value":"yes_no_decision"}]}'''
         base.append(json.loads(array))
         array = '''{"text":"What do you suggest? Yes or No?","entities":[{"entity":"intent","value":"yes_no_decision"}]}'''
+        base.append(json.loads(array))
+
+        array = '''{"text":"Piss off you idiot","entities":[{"entity":"intent","value":"insult"},{"entity":"wit$sentiment","value":"negative"}]}'''
+        base.append(json.loads(array))
+        array = '''{"text":"Fuck off","entities":[{"entity":"intent","value":"insult"},{"entity":"wit$sentiment","value":"negative"}]}'''
+        base.append(json.loads(array))
+        array = '''{"text":"Go away","entities":[{"entity":"intent","value":"insult"},{"entity":"wit$sentiment","value":"negative"}]}'''
+        base.append(json.loads(array))
+        array = '''{"text":"Fuck you with bells on","entities":[{"entity":"intent","value":"insult"},{"entity":"wit$sentiment","value":"negative"}]}'''
+        base.append(json.loads(array))
+        array = '''{"text":"You are useless!","entities":[{"entity":"intent","value":"insult"}, {"entity":"wit$sentiment","value":"negative"}]}'''
+        base.append(json.loads(array))
+        array = '''{"text":"You are tosser!","entities":[{"entity":"intent","value":"insult"}, {"entity":"wit$sentiment","value":"negative"}]}'''
         base.append(json.loads(array))
 
         jsonbase = json.dumps(base)
