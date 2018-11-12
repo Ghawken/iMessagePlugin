@@ -8,7 +8,10 @@ What it can do:
 - Send Animated GIFs/pdf files etc from within Indigo
 - Works with Mojave, untested on below versions - but shouldn't be issue
 - Indigo 7.1 and above
-- Beta currently
+- Beta currently:
+    - Additionally with 0.2.2 Natural Language processing and ability to interface with all or selected Indigo Devices
+    - Uses Wit.Ai NLP
+    - See 0.2.2 for details
 
 For Mojave will need to change System Permissions to access imsg database file
 
@@ -20,6 +23,15 @@ For Mojave will need to change System Permissions to access imsg database file
 - Will very likely need to give Indigo and IndigoPluginHost.app and IndigoServer.app Full Disk Access in the Security and Privacy settings
 
 ![](https://github.com/Ghawken/iMessagePlugin/blob/master/DocumentPics/SecurityScreen.png?raw=true)
+
+
+**/Library/Application Support/Perceptive Automation/Indigo 7 (or 7.2)**
+
+IndigoPluginHost.app
+
+IndigoServer.app
+
+Both located there to drag and drop into Security & Privacy Full Disk Access
 
 
 (sorry - don't believe any way around this - and probably needed for other plugins)
@@ -93,7 +105,7 @@ Example Commands (any text you wish can be a trigger)
  - 'Glenn is located %%d:1490780461:address%% and has about %%d:1490780461:homeTimeText%% to travel to get home'
 & clever indigo will fill in the blanks
 
-### Send iMsgFile
+### Send iMsgFile/iMsgImage
 - sends file/image/animated gif to buddy 
 (again has tickbox for last buddy)
 - Allows sending Animated Gifs via BlueIris or other Security plugin.
@@ -101,6 +113,13 @@ Example Commands (any text you wish can be a trigger)
 - eg.
 The BlueIris lastAnimGif path variable which is updated by BlueIris plugin when AnimatedGif created.
 
+### Send iMsgMessgae and file
+- sends a message with an associated file/image/animated gif to buddy 
+(again has tickbox for last buddy)
+- Allows sending Animated Gifs via BlueIris or other Security plugin.
+- Just need path to file location,or %%v:112312%% Variable substition and save to path
+- eg.
+The BlueIris lastAnimGif path variable which is updated by BlueIris plugin when AnimatedGif created.
 
 ### Ask iMsg Question
 ![](https://github.com/Ghawken/iMessagePlugin/blob/master/DocumentPics/AskiMsgQuestion.png?raw=true)
@@ -127,6 +146,121 @@ Sorry only english currently - but easy to add as many confirmation 'Oui' 'Non' 
 
 - with Number referring to FindFriends Device:
 Indigo will substitute both the address and the travel time in these places.
+
+
+# Beta Functions: From Version 0.2.2
+
+As a mechanism of controlling all indigo devices and requesting information with minimal setup I have turned to a free service wit.ai
+
+![](https://github.com/Ghawken/iMessagePlugin/blob/master/DocumentPics/wit.aiWebPage.png?raw=true)
+
+The aim of this internet service is to process any text messages you might send and enable the Plugin to reply, recognising what you want to do but also which device to apply this to.
+
+e.g
+Aiming to bring to life.. the following with minimal setup.
+
+Turn off pool Pump.
+What is the temperature of the pool?
+
+It also enables speech->text via audioMessage, and a few fun extras perhaps I got carried away with.
+
+Consider this beta - BUT if disable wit.ai in PluginConfig - rest of plugin unchanged and none of this is run.
+
+## Requirements:
+
+Need your own Wit.Ai API Key (free)
+We each need our own as our devices are named something different
+So while the NLP logic may be the same the devices referred to will be different.
+
+## Setup:
+
+### New Plugin Config Settings
+
+![](https://github.com/Ghawken/iMessagePlugin/blob/master/DocumentPics/PluginConfigScreen.png?raw=true)
+
+
+1. Create Wit.AI Api
+- Log in to, with either github or facebook.
+
+https://wit.ai
+
+![](https://github.com/Ghawken/iMessagePlugin/blob/master/DocumentPics/wit.aiWebPage.png?raw=true)
+
+
+2/ Next Go to the already existing App called 'MyFirstApp'
+- Go to Settings, top Right
+- Find the 'Server Access Token' and copy this in the PluginConfig
+
+![](https://github.com/Ghawken/iMessagePlugin/blob/master/DocumentPics/WitAIAccess_token.png?raw=true)
+
+
+Enable Use Wit.Ai Processing to use this service for processing of Messages received.
+
+Checkbox:
+## Use all Indigo Devices  (important)
+
+- This will send every indigo device name to Wit.Ai to be recognised as a device down the track.
+- This is fine if you have limited devices and the names make sense.
+- But if like me you have hundreds will names like (U) Computer Room Light, or PiBeacon_Pool Temperature
+- These names make sending a text message 'what is the PBeacon_Pool Temperature' will work but isn't much fun.
+
+- I have added the ability for WitAI to recognise synomyns for the same device 
+- eg. device is PiBeacon_Pool Temperature, other names can be 'Pool Temp', 'Pool Temperature' or even 'Pool'
+
+This is performed via the individual Device Notes:  
+On the first line of the notes (the other lines are ignored)
+a :
+
+```witai|Pool|Pool Temp|Pool Temperature```
+
+Sorry the character is the | Vertical Bar Character
+
+eg.
+
+![](https://github.com/Ghawken/iMessagePlugin/blob/master/DocumentPics/witai_Example_device.png?raw=true)
+
+
+- This will give different names which refer to the same device for all future commands
+
+### Coming back to the Checkbox - if this is unchecked only those devices so marked with witai| in device notes will be included.
+
+Okay:
+
+So ideally - give you funny named devices some better names, mark those you want to send, or send all
+
+## Then:
+
+1. Press the Button called 'Generate Wit.Ai App'
+This will send a whole lot of text based data to Wit.ai naming devices, and setting up you wit.ai device which the plugin uses
+You can access this online at wit.ai if needed but really only for finetuning.
+
+This will take a while as can only send a few devices/samples at once; so will take at least 5 if not 10 minutes to be done.
+Once finished also takes a while at Wit.Ai end as well.
+
+If any issues or want to resend different devices following some playing - press the delete wit.ai App button and then recreate after a short pause.
+
+
+Following this
+- You should be able to 'turn on INDIGODEVICE', 'turn off INDIGODEVICE',  'set INDIGODEVICE brightness to 50%',
+- 'What is the Temperature of INDIGODEVICE',
+- 'Tell me a joke'
+- 'What is  IFRIENDEVICE location'
+-  amongst others
+
+I have also added AudioMessage Uploading - which works okay within limits of speech recognition.
+From within iMSG press and hole down microphone - say command and viola!
+
+![](https://github.com/Ghawken/iMessagePlugin/blob/master/DocumentPics/record-audio-message.png?raw=true)
+
+
+Fine Tuning:
+
+- Probably more to come I suspect.
+- From within Wit.ai - can go to Inbox and validate audio received for training
+- Can also can to device_name and add any extra synomyms for this device you wish - pays to do it in Indigo Notes though/so survices delete and recreate
+
+
+
 
 
 

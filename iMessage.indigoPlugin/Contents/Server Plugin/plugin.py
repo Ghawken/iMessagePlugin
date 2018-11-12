@@ -95,7 +95,7 @@ class Plugin(indigo.PluginBase):
         # if exisits use main_access_token:
         self.main_access_token = self.pluginPrefs.get('main_access_token', '')
         if self.main_access_token == '':
-            self.access_token = indigo.activePlugin.pluginPrefs.get('access_token', '')
+            self.access_token = self.pluginPrefs.get('access_token', '')
         else:
             self.access_token = self.main_access_token
 
@@ -1741,14 +1741,17 @@ AND datetime(messageT.date/1000000000 + strftime("%s", "2001-01-01") ,"unixepoch
         self.logger.debug(u'Reply Create App:'+unicode(createnewapp))
 
         #reply_dict = json.loads(createnewapp)
+
         self.access_token= createnewapp.get('access_token')
-        self.main_access_token = self.access_token
+        self.main_access_token = createnewapp.get('access_token')
         self.app_id = createnewapp.get('app_id')
-        indigo.activePlugin.pluginPrefs['main_access_token'] = self.access_token
+
+        indigo.activePlugin.pluginPrefs['main_access_token'] = createnewapp.get('access_token')
         indigo.activePlugin.pluginPrefs['app_id']= self.app_id
         indigo.server.savePluginPrefs()
+
         self.logger.error(u'New Access Token Equals:'+unicode(self.access_token))
-        return self.access_token
+        return createnewapp.get('access_token')
 
     def wit_getappid(self, access_token):
 # finds app and get app.id
