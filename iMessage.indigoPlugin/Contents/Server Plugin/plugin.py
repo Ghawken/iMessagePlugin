@@ -271,7 +271,7 @@ class Plugin(indigo.PluginBase):
 
     def closesql(self):
         if self.debugextra:
-            self.debugLog(u"connectsql() method called.")
+            self.debugLog(u"Disconnect SQL() method called.")
         try:
             self.connection.close()
         except:
