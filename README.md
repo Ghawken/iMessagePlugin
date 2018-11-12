@@ -176,7 +176,7 @@ So while the NLP logic may be the same the devices referred to will be different
 
 ### New Plugin Config Settings
 
-![](https://github.com/Ghawken/iMessagePlugin/blob/wit.ai/DocumentPics/PluginConfigScreen.png?raw=true)
+![](https://raw.githubusercontent.com/Ghawken/iMessagePlugin/wit.ai/DocumentPics/PluginConfigScreen.png)
 
 
 1. Create Wit.AI Api
@@ -184,14 +184,14 @@ So while the NLP logic may be the same the devices referred to will be different
 
 https://wit.ai
 
-![](https://github.com/Ghawken/iMessagePlugin/blob/wit.ai/DocumentPics/wit.aiWebPage.png?raw=true)
+![](https://raw.githubusercontent.com/Ghawken/iMessagePlugin/wit.ai/DocumentPics/wit.aiWebPage.png)
 
 
 2/ Next Go to the already existing App called 'MyFirstApp'
 - Go to Settings, top Right
 - Find the 'Server Access Token' and copy this in the PluginConfig
 
-![](https://github.com/Ghawken/iMessagePlugin/blob/wit.ai/DocumentPics/WitAIAccess_token.png?raw=true)
+![](https://raw.githubusercontent.com/Ghawken/iMessagePlugin/wit.ai/DocumentPics/WitAIAccess_token.png)
 
 
 Enable Use Wit.Ai Processing to use this service for processing of Messages received.
@@ -213,11 +213,12 @@ a :
 
 ```witai|Pool|Pool Temp|Pool Temperature```
 
-Sorry the character is the | Vertical Bar Character
+- Must start with witai and then Vertical bar Characters seperating names 
+- Sorry the character is the | Vertical Bar Character
 
 eg.
 
-![](https://github.com/Ghawken/iMessagePlugin/blob/wit.ai/DocumentPics/witai_Example_device.png?raw=true)
+![](https://raw.githubusercontent.com/Ghawken/iMessagePlugin/wit.ai/DocumentPics/witai_Example_device.png)
 
 
 - This will give different names which refer to the same device for all future commands
@@ -251,7 +252,7 @@ Following this
 I have also added AudioMessage Uploading - which works okay within limits of speech recognition.
 From within iMSG press and hole down microphone - say command and viola!
 
-![](https://github.com/Ghawken/iMessagePlugin/blob/wit.ai/DocumentPics/record-audio-message.png?raw=true)
+![](https://raw.githubusercontent.com/Ghawken/iMessagePlugin/wit.ai/DocumentPics/record-audio-message-ios.jpg)
 
 
 ### Fine Tuning:
