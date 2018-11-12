@@ -20,6 +20,7 @@ import requests
 import json
 import re
 import threading
+import subprocess
 
 try:
     import indigo
@@ -31,7 +32,7 @@ class Plugin(indigo.PluginBase):
     def __init__(self, pluginId, pluginDisplayName, pluginVersion, pluginPrefs):
         indigo.PluginBase.__init__(self, pluginId, pluginDisplayName, pluginVersion, pluginPrefs)
 
-
+        self.pathtoPlugin = os.getcwd()
         self.startingUp = True
         self.pluginIsInitializing = True
         self.pluginIsShuttingDown = False
@@ -544,18 +545,11 @@ AND datetime(messageT.date/1000000000 + strftime("%s", "2001-01-01") ,"unixepoch
                 if self.use_witAi:
                     if val == 'AUDIOFILE':
                         self.logger.error(u'AUDIOFILE recognised.  finding Attachment')
-                        filepath = self.sql_fetchattachments()
-                        file_touse = [item for sublist in filepath for item in sublist]
-                        self.logger.error(u'filepath:'+unicode(file_touse[-1]))
-                        file_touse = file_touse[-1]  # last item in list
-                        file_touse = os.path.expanduser(file_touse)
-                        self.logger.error(u'Expanded FilePath:'+unicode(file_touse))
-                        resp = None
 
-                        with open(file_touse,'rb') as f:
-                            resp = self.wit_speech(f, None, {'Content-Type': 'audio/raw;encoding=floating-point;bits=16;rate=8000;endian=big'})
-                        self.logger.error(unicode(resp))
-                        messages.pop(key, None)
+                        ## send to audio file routine
+
+                        if self.process_convert_audiofile():
+                            self.logger.debug(u'Converted Message:')
                     else:
                         self.resetLastCommand = t.time() + 120
                         if self.debugextra:
@@ -565,6 +559,49 @@ AND datetime(messageT.date/1000000000 + strftime("%s", "2001-01-01") ,"unixepoch
                         self.logger.debug(unicode(reply))
                         self.witai_dealwithreply(reply, key, val)
         return
+    def process_convert_audiofile(self):
+        if self.debugextra:
+            self.logger.debug(u'Processing AUdio File')
+
+        filepath = self.sql_fetchattachments()
+
+        file_touse = [item for sublist in filepath for item in sublist]
+        self.logger.error(u'filepath:' + unicode(file_touse[-1]))
+        file_touse = file_touse[-1]  # last item in list
+        file_touse = os.path.expanduser(file_touse)
+        self.logger.error(u'Expanded FilePath:' + unicode(file_touse))
+
+        ffmpegpath = self.pathtoPlugin+'/ffmpeg/ffmpeg'
+
+        mp4fileout = file_touse[:-3]+'mp3'
+
+        try:
+            argstopass = '"' + ffmpegpath + '"' + ' -i "' + str(file_touse) + '"  "' + str(mp4fileout) +'"'
+            p1 = subprocess.Popen([argstopass], shell=True)
+
+            output, err = p1.communicate()
+            self.logger.debug(unicode(argstopass))
+            self.logger.debug('ffmpeg return code:' + unicode(p1.returncode) + ' output:' + unicode(
+                    output) + ' error:' + unicode(err))
+
+        except Exception as e:
+            self.logger.exception(u'Caught Exception within ffmpeg conversion')
+            return False
+
+        resp = None
+
+        with open(mp4fileout, 'rb') as f:
+            resp = self.wit_speech(f, None,
+                                   {'Content-Type': 'audio/mpeg3'})
+        self.logger.error(unicode(resp))
+
+        return
+
+
+
+
+
+
 #######
     def first_entity_value(self, entities, entity):
         """
