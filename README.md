@@ -51,7 +51,7 @@ https://www.macworld.com/article/3311982/macs/the-difference-between-accessibili
 - Any issues turn debug logging on and check 3 checkboxes - should supply useful information
 (including Buddy Handles as sometimes email sometimes phone numbers.)
 
-![](https://github.com/Ghawken/iMessagePlugin/blob/master/DocumentPics/PluginConfigScreen.png?raw=true)
+![](https://github.com/Ghawken/iMessagePlugin/blob/wit.ai/DocumentPics/PluginConfigScreen.png?raw=true)
 
 ## Works
 
@@ -176,7 +176,7 @@ So while the NLP logic may be the same the devices referred to will be different
 
 ### New Plugin Config Settings
 
-![](https://github.com/Ghawken/iMessagePlugin/blob/master/DocumentPics/PluginConfigScreen.png?raw=true)
+![](https://github.com/Ghawken/iMessagePlugin/blob/wit.ai/DocumentPics/PluginConfigScreen.png?raw=true)
 
 
 1. Create Wit.AI Api
@@ -184,14 +184,14 @@ So while the NLP logic may be the same the devices referred to will be different
 
 https://wit.ai
 
-![](https://github.com/Ghawken/iMessagePlugin/blob/master/DocumentPics/wit.aiWebPage.png?raw=true)
+![](https://github.com/Ghawken/iMessagePlugin/blob/wit.ai/DocumentPics/wit.aiWebPage.png?raw=true)
 
 
 2/ Next Go to the already existing App called 'MyFirstApp'
 - Go to Settings, top Right
 - Find the 'Server Access Token' and copy this in the PluginConfig
 
-![](https://github.com/Ghawken/iMessagePlugin/blob/master/DocumentPics/WitAIAccess_token.png?raw=true)
+![](https://github.com/Ghawken/iMessagePlugin/blob/wit.ai/DocumentPics/WitAIAccess_token.png?raw=true)
 
 
 Enable Use Wit.Ai Processing to use this service for processing of Messages received.
@@ -217,7 +217,7 @@ Sorry the character is the | Vertical Bar Character
 
 eg.
 
-![](https://github.com/Ghawken/iMessagePlugin/blob/master/DocumentPics/witai_Example_device.png?raw=true)
+![](https://github.com/Ghawken/iMessagePlugin/blob/wit.ai/DocumentPics/witai_Example_device.png?raw=true)
 
 
 - This will give different names which refer to the same device for all future commands
@@ -230,12 +230,13 @@ So ideally - give you funny named devices some better names, mark those you want
 
 ## Then:
 
-1. Press the Button called 'Generate Wit.Ai App'
+1. Press the Button called 'Generate Wit.Ai App'  [once we are dne only need to do this once]
+
 This will send a whole lot of text based data to Wit.ai naming devices, and setting up you wit.ai device which the plugin uses
 You can access this online at wit.ai if needed but really only for finetuning.
 
 This will take a while as can only send a few devices/samples at once; so will take at least 5 if not 10 minutes to be done.
-Once finished also takes a while at Wit.Ai end as well.
+Once finished also takes a while at Wit.Ai end as well - before everything is recognised probably - probably at least 1/2 hou
 
 If any issues or want to resend different devices following some playing - press the delete wit.ai App button and then recreate after a short pause.
 
@@ -250,14 +251,51 @@ Following this
 I have also added AudioMessage Uploading - which works okay within limits of speech recognition.
 From within iMSG press and hole down microphone - say command and viola!
 
-![](https://github.com/Ghawken/iMessagePlugin/blob/master/DocumentPics/record-audio-message.png?raw=true)
+![](https://github.com/Ghawken/iMessagePlugin/blob/wit.ai/DocumentPics/record-audio-message.png?raw=true)
 
 
-Fine Tuning:
+### Fine Tuning:
 
 - Probably more to come I suspect.
 - From within Wit.ai - can go to Inbox and validate audio received for training
 - Can also can to device_name and add any extra synomyms for this device you wish - pays to do it in Indigo Notes though/so survices delete and recreate
+
+### Other changes:
+- Add send HTTP Image - takes http/web location downloads fine and sends it to buddy.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
