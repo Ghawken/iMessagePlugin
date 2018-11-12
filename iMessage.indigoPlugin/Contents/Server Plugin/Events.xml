@@ -13,6 +13,7 @@
         The iMsg sent to Indigo iMsg Computer - use all lowercase for box above
         Actual sent message can be mixture of both uppercase and lowercase, as
         is converted to all lowercase before checks.
+        Pays to avoid extra non-number and non-letter characters if can.
     </Label>
     </Field>
 

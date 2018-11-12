@@ -545,15 +545,23 @@ AND datetime(messageT.date/1000000000 + strftime("%s", "2001-01-01") ,"unixepoch
                 if self.use_witAi:
                     if val == 'AUDIOFILE':
                         self.logger.error(u'AUDIOFILE recognised.  finding Attachment')
-
                         ## send to audio file routine
-
-                        if self.process_convert_audiofile():
-                            self.logger.debug(u'Converted Message:')
+                        converted_audio = self.process_convert_audiofile()
+                        if converted_audio is None or converted_audio=='' :
+                            self.logger.debug(u'No Message able to be converted:')
+                            messages.pop(key, None)
+                            self.resetLastCommand = t.time()
+                        else:
+                            self.resetLastCommand = t.time()
+                            messages.pop(key, None)
+                            self.logger.debug(u'Message Recevied ='+unicode(converted_audio['_text']))
+                            self.as_sendmessage(key, 'I heard: '+converted_audio['_text'])
+                            self.witai_dealwithreply(converted_audio,key,val)
                     else:
-                        self.resetLastCommand = t.time() + 120
+                        self.resetLastCommand = t.time() +120
                         if self.debugextra:
                             self.logger.debug(u'-- Message was not recognised as Trigger - sending to Wit.Ai for processing --')
+
                         reply = self.wit_message(val,context=None, n=None,verbose=None)
                         messages.pop(key, None)
                         self.logger.debug(unicode(reply))
@@ -564,19 +572,17 @@ AND datetime(messageT.date/1000000000 + strftime("%s", "2001-01-01") ,"unixepoch
             self.logger.debug(u'Processing AUdio File')
 
         filepath = self.sql_fetchattachments()
-
         file_touse = [item for sublist in filepath for item in sublist]
-        self.logger.error(u'filepath:' + unicode(file_touse[-1]))
+        self.logger.debug(u'filepath:' + unicode(file_touse[-1]))
         file_touse = file_touse[-1]  # last item in list
         file_touse = os.path.expanduser(file_touse)
-        self.logger.error(u'Expanded FilePath:' + unicode(file_touse))
+        self.logger.debug(u'Expanded FilePath:' + unicode(file_touse))
 
         ffmpegpath = self.pathtoPlugin+'/ffmpeg/ffmpeg'
-
         mp4fileout = file_touse[:-3]+'mp3'
 
         try:
-            argstopass = '"' + ffmpegpath + '"' + ' -i "' + str(file_touse) + '"  "' + str(mp4fileout) +'"'
+            argstopass = '"' + ffmpegpath + '"' + ' -i "' + str(file_touse) + '" -q:a 0 "' + str(mp4fileout) +'"'
             p1 = subprocess.Popen([argstopass], shell=True)
 
             output, err = p1.communicate()
@@ -586,16 +592,16 @@ AND datetime(messageT.date/1000000000 + strftime("%s", "2001-01-01") ,"unixepoch
 
         except Exception as e:
             self.logger.exception(u'Caught Exception within ffmpeg conversion')
-            return False
+            return ''
 
         resp = None
 
         with open(mp4fileout, 'rb') as f:
             resp = self.wit_speech(f, None,
                                    {'Content-Type': 'audio/mpeg3'})
-        self.logger.error(unicode(resp))
+        self.logger.debug(unicode(resp))
 
-        return
+        return resp
 
 
 
@@ -607,11 +613,22 @@ AND datetime(messageT.date/1000000000 + strftime("%s", "2001-01-01") ,"unixepoch
         """
         Returns first entity value
         """
-
         if entity not in entities:
             return None
         val = entities[entity][0]['value']
         if not val:
+            return None
+        return val['value'] if isinstance(val, dict) else val
+
+        #######
+    def first_entity_value_number(self, entities, entity):
+        """
+        Returns first entity value
+        """
+        if entity not in entities:
+            return None
+        val = entities[entity][0]['value']
+        if val == None:
             return None
         return val['value'] if isinstance(val, dict) else val
 
@@ -661,15 +678,11 @@ AND datetime(messageT.date/1000000000 + strftime("%s", "2001-01-01") ,"unixepoch
             self.logger.debug(u'No entities in reply.  ? Error from Wit.Ai:  Reply received folows:')
             self.logger.debug(unicode(reply))
             return
-
-
         intent = self.first_entity_value(reply, 'intent')
         intent_confidence = self.first_entity_confidence(reply,'intent')
         on_off = self.first_entity_value(reply, 'on_off')
         device_name = self.first_entity_value(reply, 'device_name')
-        number = self.first_entity_value(reply, 'number')
-
-
+        number = self.first_entity_value_number(reply, 'number')
 
         if intent:
             self.logger.debug(u'Intent:' + unicode(intent) + u' and confidence:' + unicode(intent_confidence))
@@ -721,9 +734,103 @@ AND datetime(messageT.date/1000000000 + strftime("%s", "2001-01-01") ,"unixepoch
                 advice = re.sub (r'([^a-zA-Z ]+?)', '', advice)
                 self.as_sendmessage(buddy, str(advice) )
                 return
+            if intent=='dim_set' and float(intent_confidence)>0.66:
+                self.logger.debug(u'Changing Brightness of lights')
+                if device_name is None:
+                    self.logger.debug(u'Unsure as to which Device to act on.')
+                    self.as_sendmessage(buddy, 'Sorry not sure which Device to act on.  Nothing done.')
+                    return
+                else:
+                    self.logger.debug(u'Acting on Device:'+unicode(device_name))
+                    devicetoaction = device_name
+                if number is None:
+                    self.logger.debug(u'Unsure as to what to Dim by as no Number.')
+                    self.as_sendmessage(buddy, 'Number missing. Sorry not sure what to do Device :' + devicetoaction)
+                    return
+                else:
+                    self.logger.debug(u'Dim Number action equals:' + unicode(number))
+                    number_touse = int(number)
 
+                # okay, now have confirmed devicename, and on_off just need to act.
+                # check    device is dimmable...
+                try:
+                    device = indigo.devices[devicetoaction]
+                    if hasattr(device,'brightness'):
+                        self.logger.debug(u'Brightness exisits with device.')
+                        indigo.dimmer.setBrightness(devicetoaction, number_touse)
+                    else:
+                        self.logger.info(u'No Device Brightness found:'+unicode(devicetoaction))
 
-    #
+                except:
+                    self.logger.exception(u'Exception finding Device.')
+
+            if intent == 'temperature' and float(intent_confidence)>0.66:
+                self.logger.debug(u'Getting Temperature of Device')
+                if device_name is None:
+                    self.logger.debug(u'Unsure as to which Device to act on.')
+                    self.as_sendmessage(buddy, 'Sorry not sure which Device to act on.  Nothing done.')
+                    return
+                else:
+                    self.logger.debug(u'Acting on Device:' + unicode(device_name))
+                    devicetoaction = device_name
+                try:
+                    temperature = ''
+                    device = indigo.devices[devicetoaction]
+                    if hasattr(device, 'subModel'):
+                        if device.subModel == 'Temperature':
+                            self.logger.debug(u'Temperature found.  Within Attribute and SubModel with device.')
+                            temperature = device.states['sensorValue']
+                            self.as_sendmessage(buddy, 'Temperature from '+devicetoaction+' is '+str(temperature))
+                            return
+                    if 'Temperature' in device.states:
+                        self.logger.debug(u'Temperature found in device.states')
+                        temperature= device.states['Temperature']
+                        self.as_sendmessage(buddy, 'Temperature from ' + devicetoaction + ' is ' + str(temperature))
+                        return
+                    elif 'temperature' in device.states:
+                        self.logger.debug(u'temperature found in device.states')
+                        temperature = device.states['temperature']
+                        self.as_sendmessage(buddy, 'Temperature from ' + devicetoaction + ' is ' + str(temperature))
+                        return
+
+                    else:
+                        self.as_sendmessage(buddy, 'Unable to obtain tempeature from Device : ' + devicetoaction )
+                        self.logger.info(u'No Temperature reading from Device Found:' + unicode(devicetoaction))
+                except:
+                    self.logger.exception(u'Caught Exception finding Temperture Device.')
+
+            if intent == 'location' and float(intent_confidence)>0.66:
+                self.logger.debug(u'Getting Location of Device')
+                if device_name is None:
+                    self.logger.debug(u'Unsure as to which Device to act on.')
+                    self.as_sendmessage(buddy, 'Sorry not sure which Device to act on.  Nothing done.')
+                    return
+                else:
+                    self.logger.debug(u'Acting on Device:' + unicode(device_name))
+                    devicetoaction = device_name
+                try:
+                    location = ''
+                    device = indigo.devices[devicetoaction]
+                    if device.model != 'FindFriends Device':
+                        self.logger.debug(u'Not possible to locate this device currently.')
+                        self.as_sendmessage(buddy, 'Sorry not possible to locate this device currently.')
+                        return
+
+                    if 'address' in device.states:
+                        self.logger.debug(u'Temperature found in device.states')
+                        location = device.states['address']
+                        googlemapsurl = device.states["googleMapUrl"] # State "googleMapUrl" of "iFriend Device"
+                        self.as_sendmessage(buddy, 'Location of ' + devicetoaction + ' is ' + str(location))
+                        self.as_sendmessage(buddy, 'Map:  ' + str(googlemapsurl))
+                        return
+                    else:
+                        self.as_sendmessage(buddy, 'Unable to obtain location from Device : ' + devicetoaction)
+                        self.logger.info(u'No location reading from Device Found:' + unicode(devicetoaction))
+                        return
+                except:
+                    self.logger.exception(u'Caught Exception finding Location of Device.')
+
+    #########################################################
     def checkanswer(self, buddyHandle, message, sublist):
         if self.debugextra:
             self.debugLog(u"checkanswer() method called.")
@@ -1323,7 +1430,7 @@ AND datetime(messageT.date/1000000000 + strftime("%s", "2001-01-01") ,"unixepoch
                     base.append(json.loads(array))
                     array = '''{"text":"'''+ devicename +''' off","entities":[{"entity":"intent","value":"device_action"},{"entity":"wit$on_off","value":"false"},{"entity":"device_name","value":"'''+devicename+'''"}]}'''
                     base.append(json.loads(array))
-                if 'temperature' in device.states or 'Temperature' in device.states:
+                if 'temperature' in device.states or 'Temperature' in device.states or device.deviceTypeId=='Temperature' or (hasattr(device, 'subModel') and device.subModel=='Temperature'):
                     x=x+4
                     devicename = str(device.name)
                     array = '''{"text":"What is the temperature of the ''' + devicename + '''","entities":[{"entity":"intent","value":"temperature"},{"entity":"device_name","value":"''' + devicename + '''"}]}'''
@@ -1335,13 +1442,18 @@ AND datetime(messageT.date/1000000000 + strftime("%s", "2001-01-01") ,"unixepoch
                     array = '''{"text":"How hot is ''' + devicename + '''","entities":[{"entity":"intent","value":"temperature"},{"entity":"device_name","value":"''' + devicename + '''"}]}'''
                     base.append(json.loads(array))
                 if device.pluginId == 'com.GlennNZ.indigoplugin.FindFriendsMini' and device.model =='FindFriends Device':
-                    x=x+2
+                    x=x+4
                     devicename = str(device.name)
                     address = device.states['address']
                     array = '''{"text":"Where is ''' + devicename + '''","entities":[{"entity":"intent","value":"location"},{"entity":"device_name","value":"''' + devicename + '''"}]}'''
                     base.append(json.loads(array))
                     array = '''{"text":"Locate ''' + devicename + '''","entities":[{"entity":"intent","value":"location"},{"entity":"device_name","value":"''' + devicename + '''"}]}'''
                     base.append(json.loads(array))
+                    array = '''{"text":"Find the location of ''' + devicename + '''","entities":[{"entity":"intent","value":"location"},{"entity":"device_name","value":"''' + devicename + '''"}]}'''
+                    base.append(json.loads(array))
+                    array = '''{"text":"Find ''' + devicename + ''' whereabouts","entities":[{"entity":"intent","value":"location"},{"entity":"device_name","value":"''' + devicename + '''"}]}'''
+                    base.append(json.loads(array))
+
                 if 'brightnessLevel' in device.states:
                     x = x + 6
                     devicename = str(device.name)
@@ -1378,7 +1490,7 @@ AND datetime(messageT.date/1000000000 + strftime("%s", "2001-01-01") ,"unixepoch
                     array = '''{"text":"''' + devicename + ''' off","entities":[{"entity":"intent","value":"device_action"},{"entity":"wit$on_off","value":"false"},{"entity":"device_name","value":"''' + devicename + '''"}]}'''
                     base.append(json.loads(array))
 
-                    if 'temperature' in device.states or 'Temperature' in device.states:
+                    if 'temperature' in device.states or 'Temperature' in device.states or device.deviceTypeId=='Temperature' or (hasattr(device, 'subModel') and device.subModel=='Temperature'):
                         x = x + 4
                         devicename = str(device.name)
                         array = '''{"text":"What is the temperature of the ''' + devicename + '''","entities":[{"entity":"intent","value":"temperature"},{"entity":"device_name","value":"''' + devicename + '''"}]}'''
@@ -1390,13 +1502,18 @@ AND datetime(messageT.date/1000000000 + strftime("%s", "2001-01-01") ,"unixepoch
                         array = '''{"text":"How hot is ''' + devicename + '''","entities":[{"entity":"intent","value":"temperature"},{"entity":"device_name","value":"''' + devicename + '''"}]}'''
                         base.append(json.loads(array))
                     if device.pluginId == 'com.GlennNZ.indigoplugin.FindFriendsMini' and device.model == 'FindFriends Device':
-                        x = x + 2
+                        x = x + 4
                         devicename = str(device.name)
                         address = device.states['address']
                         array = '''{"text":"Where is ''' + devicename + '''","entities":[{"entity":"intent","value":"location"},{"entity":"device_name","value":"''' + devicename + '''"}]}'''
                         base.append(json.loads(array))
                         array = '''{"text":"Locate ''' + devicename + '''","entities":[{"entity":"intent","value":"location"},{"entity":"device_name","value":"''' + devicename + '''"}]}'''
                         base.append(json.loads(array))
+                        array = '''{"text":"Find the location of ''' + devicename + '''","entities":[{"entity":"intent","value":"location"},{"entity":"device_name","value":"''' + devicename + '''"}]}'''
+                        base.append(json.loads(array))
+                        array = '''{"text":"Find ''' + devicename + ''' whereabouts","entities":[{"entity":"intent","value":"location"},{"entity":"device_name","value":"''' + devicename + '''"}]}'''
+                        base.append(json.loads(array))
+
                     if 'brightnessLevel' in device.states:
                         x = x + 6
                         devicename = str(device.name)
@@ -1442,6 +1559,8 @@ AND datetime(messageT.date/1000000000 + strftime("%s", "2001-01-01") ,"unixepoch
         array = '''{"text":"Do you have any advice for me?","entities":[{"entity":"intent","value":"advice"}]}'''
         base.append(json.loads(array))
         array = '''{"text":"Can you help with some advice?","entities":[{"entity":"intent","value":"advice"}]}'''
+        base.append(json.loads(array))
+        array = '''{"text":"What should I do?","entities":[{"entity":"intent","value":"advice"}]}'''
         base.append(json.loads(array))
 
         array = '''{"text":"Hello","entities":[{"entity":"intent","value":"greeting"}]}'''
@@ -1582,6 +1701,11 @@ AND datetime(messageT.date/1000000000 + strftime("%s", "2001-01-01") ,"unixepoch
     def triggerCheck(self, device,  triggertype, imsgcmdreceived):
         if self.debugtriggers:
             self.logger.debug('triggerCheck run.  triggertype:'+unicode(triggertype))
+
+        imsgcmdreceived = re.sub(r'([^a-zA-Z ]+?)', '', imsgcmdreceived)
+        if self.debugtriggers:
+            self.logger.debug(u'Removed extra characters from cmd received:'+imsgcmdreceived)
+
         try:
             for triggerId, trigger in sorted(self.triggers.iteritems()):
                 if self.debugtriggers:
