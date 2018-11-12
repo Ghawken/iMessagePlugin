@@ -558,7 +558,7 @@ AND datetime(messageT.date/1000000000 + strftime("%s", "2001-01-01") ,"unixepoch
             else:
                 if self.use_witAi:
                     if val == 'AUDIOFILE':
-                        self.logger.error(u'AUDIOFILE recognised.  finding Attachment')
+                        self.logger.debug(u'AUDIOFILE recognised.  Now finding Attachment with SQL query...')
                         ## send to audio file routine
                         converted_audio = self.process_convert_audiofile()
                         if converted_audio is None or converted_audio=='' :
