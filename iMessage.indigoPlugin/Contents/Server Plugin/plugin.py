@@ -78,6 +78,20 @@ class Plugin(indigo.PluginBase):
 
         self.messages = []
 
+        MAChome = os.path.expanduser("~") + "/"
+        folderLocation = MAChome + "Documents/Indigo-iMessagePlugin/"
+        self.saveDirectory = folderLocation
+
+        self.logger.debug(u'Self.SaveDirectory equals:'+unicode(self.saveDirectory))
+
+        try:
+            if not os.path.exists(self.saveDirectory):
+                os.makedirs(self.saveDirectory)
+        except:
+            self.logger.error(u'Error Accessing Temp Directory.')
+            pass
+
+
         # if exisits use main_access_token:
         self.main_access_token = self.pluginPrefs.get('main_access_token', '')
         if self.main_access_token == '':
@@ -667,6 +681,19 @@ AND datetime(messageT.date/1000000000 + strftime("%s", "2001-01-01") ,"unixepoch
         except:
             self.logger.exception(u'Error getting Joke.  This is no joke.')
             return ''
+
+    def get_YN_image(self):
+        try:
+            self.logger.debug(u'get Y_N Gif called')
+            joke = requests.get('https://yesno.wtf/api/')
+            if joke.status_code >= 200:
+                httpimage = json.loads(joke.text)
+                return httpimage['image']
+            else:
+                return 'Error. This is no joke.'
+        except:
+            self.logger.exception(u'Error getting Joke.  This is no joke.')
+            return ''
 ######
     def witai_dealwithreply(self, reply, buddy, original_message):
         if self.debugextra:
@@ -728,6 +755,21 @@ AND datetime(messageT.date/1000000000 + strftime("%s", "2001-01-01") ,"unixepoch
                 joke = re.sub (r'([^a-zA-Z ]+?)', '', joke)
                 self.as_sendmessage(buddy, str(joke) )
                 return
+            if intent=='yes_no_decision' and float(intent_confidence)>0.50:
+                self.logger.debug(u'Giving some Yes or No anwsers....')
+                advice = self.get_YN_image()
+                try:
+                    filetodownload = str(advice)
+                    response = requests.get(filetodownload)
+                    filetosave = self.saveDirectory + filetodownload.rsplit('/', 1)[-1]
+                    with open(filetosave, 'wb') as f:
+                        f.write(response.content)
+                    t.sleep(1.5)
+                    self.as_sendpicture(buddy, filetosave)
+                except:
+                    self.logger.exception(u'Exception in Y/N reply')
+                return
+
             if intent=='advice' and float(intent_confidence)>0.50:
                 self.logger.debug(u'Giving some advice....')
                 advice = self.get_advice()
@@ -1156,6 +1198,57 @@ AND datetime(messageT.date/1000000000 + strftime("%s", "2001-01-01") ,"unixepoch
 
         return
 
+    def sendiMsgInternetPicture(self, action):
+        if self.debugextra:
+            self.debugLog(u"sendImsgInternet() method called.")
+        theMessage = self.substitute(action.props.get("message", ""))
+        buddyHandle = action.props.get('buddyId', '')
+        lastbuddy = action.props.get('lastBuddy', False)
+        if lastbuddy:
+            buddyHandle = str(self.lastBuddy)
+
+        if self.debugextra:
+            self.debugLog(u"sendImsgPicture() buddyHandle:" + unicode(buddyHandle) + u' and theMessage:' + unicode(
+                theMessage) + u' and use lastBuddy:' + unicode(lastbuddy))
+        if buddyHandle == '':
+            self.logger.debug(u'Message sending aborted as buddyHandle is blank')
+            self.logger.debug(u'If using LastBuddy need to send message before this is filled')
+            return
+
+        try:
+            filetodownload = str(theMessage)
+            response = requests.get(filetodownload)
+
+            filetosave = self.saveDirectory + filetodownload.rsplit('/', 1)[-1]
+
+            with open(filetosave,'wb') as f:
+                f.write(response.content)
+            t.sleep(1.5)
+
+            self.as_sendpicture(buddyHandle, filetosave)
+        except Exception as ex:
+            errortype = type(ex).__name__
+            self.logger.debug(u'A error of type :'+unicode(errortype)+' occured.  The longer message is /n:'+unicode(ex))
+            if errortype == 'ScriptError':
+                if "Can?t get buddy id" in str(ex):
+                    self.logger.error(u'An error occured sending to buddy Handle:  '+unicode(buddyHandle))
+                    self.logger.error(u'It seems the buddy Handle is not correct.')
+                    if self.debugexceptions:
+                        self.logger.exception(u'Exception:')
+                elif "Can?t get POSIX" in str(ex):
+                    self.logger.error(u'An error occured sending to buddy :  '+unicode(buddyHandle))
+                    self.logger.error(u'It seems that the File is not readable?  File given:'+unicode(theMessage))
+                    if self.debugexceptions:
+                        self.logger.exception(u'Exception:')
+                else:
+                    self.logger.error(u'An Error occured within the iMsg AppleScript component - ScriptError')
+                    self.logger.error(u'The Error was :'+unicode(ex))
+                    if self.debugexceptions:
+                        self.logger.exception(u'Exception:')
+            else:
+                self.logger.exception(u'An unhandled exception was caught here from SendiMsgPicture:'+unicode(ex))
+
+        return
 #########
     def toggleDebugEnabled(self):
         """ Toggle debug on/off. """
@@ -1569,6 +1662,18 @@ AND datetime(messageT.date/1000000000 + strftime("%s", "2001-01-01") ,"unixepoch
         base.append(json.loads(array))
         array = '''{"text":"What is up?","entities":[{"entity":"intent","value":"greeting"}]}'''
         base.append(json.loads(array))
+
+        array = '''{"text":"Should I value you opinion?","entities":[{"entity":"intent","value":"yes_no_decision"}]}'''
+        base.append(json.loads(array))
+        array = '''{"text":"Shall I or Shall I not?","entities":[{"entity":"intent","value":"yes_no_decision"}]}'''
+        base.append(json.loads(array))
+        array = '''{"text":"Should I do it?","entities":[{"entity":"intent","value":"yes_no_decision"}]}'''
+        base.append(json.loads(array))
+        array = '''{"text":"Should I really do this?","entities":[{"entity":"intent","value":"yes_no_decision"}]}'''
+        base.append(json.loads(array))
+        array = '''{"text":"What do you suggest? Yes or No?","entities":[{"entity":"intent","value":"yes_no_decision"}]}'''
+        base.append(json.loads(array))
+
         jsonbase = json.dumps(base)
         replyend = self.witReq(self.access_token, 'POST', '/samples', '', jsonbase)
         self.logger.debug(unicode(jsonbase))

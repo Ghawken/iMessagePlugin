@@ -77,6 +77,28 @@
             </Field>
         </ConfigUI>
     </Action>
+
+        <Action id="sendInternetFile">
+        <Name>Send iMsg Picture/File from HTTP Source</Name>
+        <CallbackMethod>sendiMsgInternetPicture</CallbackMethod>
+        <ConfigUI>
+            <Field type="label" id="schedule_label">
+                <Label>Select the Buddy Handle to send message to</Label>
+            </Field>
+            <Field type="menu" id="buddyId" visibleBindingId="lastBuddy" visibleBindingValue="false" >
+                <Label>Buddy Handle:</Label>
+                <List class="self" method="buddyListGenerator" dynamicReload="false"/>
+            </Field>
+            <Field type="checkbox" id="lastBuddy" defaultValue="false">
+                <Label>Use last Buddy Handle message received from?:</Label>
+            </Field>
+            <Field type="textfield" id="message">
+                <Label>Http Path to File:</Label>
+            </Field>
+        </ConfigUI>
+    </Action>
+
+
    <Action id="sendQuestion">
         <Name>Send iMsg Question</Name>
         <CallbackMethod>sendiMsgQuestion</CallbackMethod>
