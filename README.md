@@ -152,7 +152,7 @@ Indigo will substitute both the address and the travel time in these places.
 
 As a mechanism of controlling all indigo devices and requesting information with minimal setup I have turned to a free service wit.ai
 
-![](https://github.com/Ghawken/iMessagePlugin/blob/master/DocumentPics/wit.aiWebPage.png?raw=true)
+![](https://raw.githubusercontent.com/Ghawken/iMessagePlugin/wit.ai/DocumentPics/wit.aiWebPage.png)
 
 The aim of this internet service is to process any text messages you might send and enable the Plugin to reply, recognising what you want to do but also which device to apply this to.
 
@@ -268,7 +268,23 @@ From within iMSG press and hole down microphone - say command and viola!
 
 
 
-
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
+.
 
 
 
