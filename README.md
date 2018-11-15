@@ -164,19 +164,40 @@ Indigo will substitute both the address and the travel time in these places.
 
 As a mechanism of controlling all indigo devices and requesting information with minimal setup I have turned to a free service wit.ai
 
-![](https://raw.githubusercontent.com/Ghawken/iMessagePlugin/wit.ai/DocumentPics/wit.aiWebPage.png)
+![](http://ectolus.com/wp-content/uploads/2017/06/WITAI.png)
 
 The aim of this internet service is to process any text messages you might send and enable the Plugin to reply, recognising what you want to do but also which device to apply this to.
 
 e.g
 Aiming to bring to life.. the following with minimal setup.
 
-Turn off pool Pump.
-What is the temperature of the pool?
+- Turn off pool Pump.
+- Dim the living room light to 20%
+- Set Living Room light to 100% brightness
+- What is the temperature in Maxs Room?
+- Tell me a joke?
+- What is the temperature of the pool?
+- Can you help with some advice?
+- How hot is the Living Room?
+- What is Glenn's Location?
 
 It also enables speech->text via audioMessage, and a few fun extras perhaps I got carried away with.
 
-Consider this beta - BUT if disable wit.ai in PluginConfig - rest of plugin unchanged and none of this is run.
+Basically Wit.ai - recognises message:
+ **intent**, currently options: device_action, insult, yes_no_decision, joke, dim_set, temperature, advice
+& **entities** such as device_name (which is Indigo Device), plus others such as number/sentiment/on_off etc.
+This parsed result is sent back to the plugin to action. (very quickly)
+
+So if message is sent *'Please Indigo could you be a dear and turn on the living room light?'*
+
+The (Plugin after suitable wit.ai training/samples) should recognise **intent**: *device_action*, **device_name**:*'Living Room light'*, and **on_off** = *on*
+
+The plugin parses the reply and then Turns on living room light for example.
+
+Within Wit.ai you can train any sentence structure to the correct intent and result.  The aim is for the plugin to probably do this at Wit.ai app creation which is what currently happens, obviously others may speak in a different manner. :roll: and I can add any samples/sentence structures wished.
+
+
+**Consider this beta - BUT if disable wit.ai in PluginConfig - rest of plugin unchanged and none of this is run**
 
 ## Requirements:
 
