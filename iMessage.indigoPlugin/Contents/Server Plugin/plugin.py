@@ -549,7 +549,7 @@ AND datetime(messageT.date/1000000000 + strftime("%s", "2001-01-01") ,"unixepoch
 
         for key,val in messages.items():
             self.lastBuddy = key
-            if self.triggerCheck('', 'commandReceived', val.lower() ):
+            if self.triggerCheck(key, 'commandReceived', val.lower() ):
                 self.resetLastCommand = t.time()+120
                 messages.pop(key, None)
                 if self.debugextra:
@@ -1840,9 +1840,11 @@ AND datetime(messageT.date/1000000000 + strftime("%s", "2001-01-01") ,"unixepoch
         assert trigger.id in self.triggers
         del self.triggers[trigger.id]
 
-    def triggerCheck(self, device,  triggertype, imsgcmdreceived):
+    def triggerCheck(self, buddy,  triggertype, imsgcmdreceived):
         if self.debugtriggers:
             self.logger.debug('triggerCheck run.  triggertype:'+unicode(triggertype))
+
+        Triggered = False
 
         imsgcmdreceived = re.sub(r'([^a-zA-Z ]+?)', '', imsgcmdreceived)
         if self.debugtriggers:
@@ -1860,9 +1862,17 @@ AND datetime(messageT.date/1000000000 + strftime("%s", "2001-01-01") ,"unixepoch
                         if self.debugtriggers:
                             self.logger.debug("===== Executing commandReceived Trigger %s (%d)" % (trigger.name, trigger.id))
                         indigo.trigger.execute(trigger)
-                        return True
+                        Triggered = True
+                if trigger.pluginTypeId == "specificBuddycommandReceived" and triggertype == 'commandReceived':
+                    if self.debugtriggers:
+                        self.logger.debug(u'Trigger PluginProps: Specific CommandCalled:'+unicode(trigger.pluginProps['commandCalled']))
+                    if buddy in trigger.pluginProps['buddyId']:  # checking buddy in list of options
+                        if self.debugtriggers:
+                            self.logger.debug(u'Buddy Found:'+unicode(buddy)+' and Buddy in allowed list for trigger:'+unicode(trigger.pluginProps['buddyId'])+' Specific Command Called:' + unicode(trigger.pluginProps['commandCalled']))
+                        indigo.trigger.execute(trigger)
+                        Triggered = True
 
-            return False
+            return Triggered
 
         except:
             if self.debugexceptions:

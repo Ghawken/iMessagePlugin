@@ -20,5 +20,35 @@
 
         </ConfigUI>
     </Event>
+
+        <Event id="specificBuddycommandReceived">
+        <Name>Specific Buddy : Command Received</Name>
+        <ConfigUI>
+            <Field type="list" id="buddyId" >
+                <Label>Buddy Handle(s):</Label>
+                <List class="self" method="buddyListGenerator" dynamicReload="false"/>
+            </Field>
+
+            <Field id="commandCalled" type="textfield" defaultValue="">
+				<Label>Command Received:
+
+                </Label>
+			</Field>
+		  <Field id="sep622" type="separator"/>
+    <Field id="space112" type="label" fontSize="small" fontColor="black">
+    <Label>
+        Notes:
+        Can select multiple correct buddies above
+
+        The iMsg sent to Indigo iMsg Computer - use all lowercase for box above
+        Actual sent message can be mixture of both uppercase and lowercase, as
+        is converted to all lowercase before checks.
+        Pays to avoid extra non-number and non-letter characters if can.
+    </Label>
+    </Field>
+
+
+        </ConfigUI>
+    </Event>
 </Events>
 
