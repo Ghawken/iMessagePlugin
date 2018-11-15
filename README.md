@@ -94,6 +94,18 @@ Example Commands (any text you wish can be a trigger)
 - Lock House
 - Alarm on
 
+
+### New from 0.2.4
+
+Add Specific Buddy Command Trigger: 
+
+Multiple Buddies can be selected and will only trigger if Buddy selected 
+
+![](https://github.com/Ghawken/iMessagePlugin/blob/master/DocumentPics/TriggerSpecificBuddyCommand.png?raw=true)
+
+
+
+
 ## Three current Plugin Actions
 
 ### Send Imsg 
@@ -265,6 +277,22 @@ From within iMSG press and hole down microphone - say command and viola!
 - Add send HTTP Image - takes http/web location downloads fine and sends it to buddy.
 
 
+
+
+## Changelog:
+
+### 0.2.4
+Changes to PluginConfig - hide the scary wit.ai stuff if not using
+Allow Wit.ai device to be updated with app - update button
+Update Images Documentation
+
+### 0.2.3
+Add Specific Buddy Command Received Trigger:
+
+![](https://github.com/Ghawken/iMessagePlugin/blob/master/DocumentPics/TriggerSpecificBuddyCommand.png?raw=true)
+
+
+Potential bug fix as will Continue checking triggers even if one is triggered (might be multiple triggers same)
 
 
 
