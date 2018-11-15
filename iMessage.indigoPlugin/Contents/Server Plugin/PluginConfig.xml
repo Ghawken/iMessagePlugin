@@ -49,16 +49,18 @@
   <Field id="space120" type="label" alignText="left">
     <Label>Wit.Ai AI:</Label>
   </Field>
-     <Field id="usewit_Ai" type="checkbox" tooltip="Enabling will use Wit_Ai.">
+     <Field id="usewit_Ai" type="checkbox" defaultValue="false" tooltip="Enabling will use Wit_Ai.">
         <Label/>
         <Description>Use Wit.Ai Processing:</Description>
     </Field>
-     <Field id="wit_alldevices" type="checkbox" tooltip="Enabling will send all devices to Wit.ai.">
+
+
+    <Field id="wit_alldevices" type="checkbox" tooltip="Enabling will send all devices to Wit.ai." visibleBindingId="usewit_Ai" visibleBindingValue="true">
         <Label/>
         <Description>Use all Indigo Devices:</Description>
     </Field>
 
-          <Field id="space2ae3" type="label" justify="right" fontSize="small" fontColor="black">
+          <Field id="space2ae3" type="label" justify="right" fontSize="small" fontColor="black" visibleBindingId="usewit_Ai" visibleBindingValue="true" >
     <Label>
         Enabling this will send ALL indigo devices to Wit.Ai App
         Disabling will only send those you have indicated with witai in Notes
@@ -66,42 +68,80 @@
         eg.        witai|Main Light|Main Lamp|Living Room Main Lamp
     </Label>
           </Field>
-   <Field id="access_token" type="textfield" defaultValue="" tooltip="Witopia Access Token" dynamicreload="true">
+   <Field id="access_token" type="textfield" defaultValue="" tooltip="Witopia Access Token" dynamicreload="true" visibleBindingId="usewit_Ai" visibleBindingValue="true" >
     <Label>Access Token:</Label>
   </Field>
       <Field id="generateWitAIApp"
 				   type="button"
-				   tooltip="Click on this button to Generate Wit.Ai Data / Application">
+				   tooltip="Click on this button to Generate Wit.Ai Data / Application" visibleBindingId="usewit_Ai" visibleBindingValue="true">
 				<Label>Generate Wit.AI App</Label>
 				<Title>Generate Wit.AI App</Title>
 				<CallbackMethod>wit_ThreadCreate</CallbackMethod>
       </Field>
-          <Field id="space2ae" type="label" fontSize="small" fontColor="black">
+
+
+
+    <Field id="space2ae" type="label" fontSize="small" fontColor="black" visibleBindingId="usewit_Ai" visibleBindingValue="true" >
     <Label>
-        This will use the Access Token above to create a new Indigo iMessage App.
-        Do this after deleting app below - if need to update devices and if have made changes
+        This will use the Access Token above to create a new Indigo iMessage Wit.Ai App.
         This new App - will have a new access token and the below field should change to reflect that
         This will take at least 5-10 minutes to finish and possibility longer.
         (the wit.ai app also takes a while to finish thinking about your information provided)
 
         It will run in a seperate thread.        Once Complete - Indigo log will let you know
     </Label>
+
   </Field>
-   <Field id="main_access_token" type="textfield" fontColor="black" tooltip="Witopia Access Token NEW" readonly="true">
+     <Field id="sep921" type="separator" visibleBindingId="usewit_Ai" visibleBindingValue="true" />
+
+  <Field id="space1a20" type="label" alignText="left" visibleBindingId="usewit_Ai" visibleBindingValue="true">
+    <Label>Wit.Ai Update:</Label>
+  </Field>
+
+       <Field id="updatewitDevices"
+				   type="button"
+				   tooltip="Click on this button to Update all Wit.Ai Devices/Synonyms" visibleBindingId="usewit_Ai" visibleBindingValue="true">
+				<Label>Update Wit.AI App</Label>
+				<Title>Update Wit.AI App</Title>
+				<CallbackMethod>wit_updateDevices</CallbackMethod>
+       </Field>
+    <Field id="space2221ae" type="label" fontSize="small" fontColor="black" visibleBindingId="usewit_Ai" visibleBindingValue="true">
+    <Label>
+        This will send any new information to wit.ai
+        Click this if have updated the devices you wish to control/use and have
+        updated the Note device field with witai|synomyns for devices
+
+    </Label></Field>
+ <Field id="sepa29" type="separator" visibleBindingId="usewit_Ai" visibleBindingValue="true"/>
+    <Field id="space1ba20" type="label" alignText="left" visibleBindingId="usewit_Ai" visibleBindingValue="true">
+    <Label>Wit.Ai Delete:</Label>
+  </Field>
+
+    <Field id="main_access_token" type="textfield" fontColor="black" tooltip="Witopia Access Token NEW" readonly="true" visibleBindingId="usewit_Ai" visibleBindingValue="true" >
     <Label>New App Access Token:</Label>
   </Field>
-   <Field id="app_id" type="textfield" tooltip="Witopia App Id Token NEW" fontColor="black" readonly="true" >
+
+
+
+
+   <Field id="app_id" type="textfield" tooltip="Witopia App Id Token NEW" fontColor="black" readonly="true" visibleBindingId="usewit_Ai" visibleBindingValue="true" >
     <Label>App_ID:</Label>
   </Field>
-        <Field id="deletewitApp"
+    <Field id="deletewitApp"
 				   type="button"
-				   tooltip="Click on this button to Delete all Wit.Ai Data / Application">
+				   tooltip="Click on this button to Delete all Wit.Ai Data / Application" visibleBindingId="usewit_Ai" visibleBindingValue="true">
 				<Label>Delete Wit.AI App</Label>
 				<Title>Delete Wit.AI App</Title>
 				<CallbackMethod>wit_Delete</CallbackMethod>
       </Field>
+   <Field id="space2aaeae" type="label" fontSize="small" fontColor="black" visibleBindingId="usewit_Ai" visibleBindingValue="true">
+    <Label>
+        This will completely, irreversibly delete the wit.ai App
+        Do this if wish to start again, prior to pressing the Generate New App button
+        (ideally this should not be used)
 
-
+    </Label>
+   </Field>
 
 
  <Field id="sep12139" type="separator"/>

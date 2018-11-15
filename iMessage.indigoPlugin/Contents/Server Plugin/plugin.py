@@ -1430,11 +1430,111 @@ AND datetime(messageT.date/1000000000 + strftime("%s", "2001-01-01") ,"unixepoch
         indigo.server.savePluginPrefs()
         return
 
+    def wit_updateDevices(self, valuesDict):
+
+        if self.debugextra:
+            self.logger.debug(u'Wit.Ai Update called')
+        if self.main_access_token == '':
+            self.access_token = indigo.activePlugin.pluginPrefs.get('access_token','')
+        else:
+            self.access_token = self.main_access_token
+
+        # check apps
+        checkappexists = self.wit_getappid(self.access_token)
+        if checkappexists==False or self.access_token=='':
+            self.logger.info(u'wit.Ai Application does not seem to exist.  Press Create first before updating')
+            return
+
+        array2 = '''{"doc":"Indigo device_name","lookups":["free-text","keywords"],"values":['''
+        # array2 = '''{"values":['''
+        x = 0
+        synomynarray = []
+
+
+## Push all new names and synomyns
+        for device in indigo.devices.itervalues():
+            if self.wit_alldevices:
+                description = str(device.description)
+                if description != '' and description.startswith('witai'):
+                    # okay - just grab the first line
+                    # self.logger.debug(u'Description: String result found:'+unicode(description))
+                    description = description.split('\n', 1)[0]
+                    # firstline, now remove witai
+                    # self.logger.debug(u'Description: First Line only:'+unicode(description))
+                    description = description[6:]
+                    # self.logger.debug(u'Description: New Description equals:'+unicode(description))
+                    # now break up by seperating on | characters
+                    synomynarray = description.split('|')
+                    # self.logger.debug(u'Description: Array now equals:'+unicode(synomynarray))
+
+                devicename = str(device.name)
+                array2 = array2 + '''{"value":"''' + devicename + '''","expressions":["''' + devicename + '''",'''
+                if synomynarray:  # not empty
+                    for synomyn in synomynarray:
+                        array2 = array2 + '''"''' + synomyn + '''",'''
+
+                    del synomynarray[:]
+                array2 = array2[:-1]
+                array2 = array2 + '''],"metadata" :  "''' + str(device.id) + '''"},'''
+
+            else:
+                description = str(device.description)
+                if description != '' and description.startswith('witai'):
+                    # okay - just grab the first line
+                    # self.logger.debug(u'Description: String result found:' + unicode(description))
+                    description = description.split('\n', 1)[0]
+                    # firstline, now remove witai
+                    # self.logger.debug(u'Description: First Line only:' + unicode(description))
+                    description = description[6:]
+                    # self.logger.debug(u'Description: New Description equals:' + unicode(description))
+                    # now break up by seperating on | characters
+                    synomynarray = description.split('|')
+                    # .logger.debug(u'Description: Array now equals:' + unicode(synomynarray))
+
+                    devicename = str(device.name)
+                    array2 = array2 + '''{"value":"''' + devicename + '''","expressions":["''' + devicename + '''",'''
+                    if synomynarray:  # not empty
+                        for synomyn in synomynarray:
+                            array2 = array2 + '''"''' + synomyn + '''",'''
+
+                        del synomynarray[:]
+                    array2 = array2[:-1]
+                    array2 = array2 + '''],"metadata" :  "''' + str(device.id) + '''"},'''
+
+        array2 = array2[:-1] + ']}'
+        # array2 = json.dumps(array2)
+        self.logger.debug(unicode(array2))
+
+        params = {}
+        params['v'] = '20181110'
+        entityput = self.witReq(self.access_token, 'PUT', '/entities/device_name', params, array2)
+        self.logger.debug(unicode(entityput))
+        t.sleep(10)
+
+        ## send any new samples between versions
+        ## Probably pay to run this on first startup....
+
+        base =[]
+        array = '''{"text":"Tell me a joke","entities":[{"entity":"intent","value":"joke"}]}'''
+        base.append(json.loads(array))
+        array = '''{"text":"Do you know any good jokes?","entities":[{"entity":"intent","value":"joke"}]}'''
+        base.append(json.loads(array))
+        array = '''{"text":"Please tell me a funny joke?","entities":[{"entity":"intent","value":"joke"}]}'''
+        base.append(json.loads(array))
+        jsonbase = json.dumps(base)
+        replyend = self.witReq(self.access_token, 'POST', '/samples', '', jsonbase)
+        self.logger.debug(unicode(jsonbase))
+        self.logger.debug(unicode(replyend))
+        x = 0
+        del base[:]
+
+        self.logger.info(u'Imessage Plugin:  wit.Ai Device successfully updated.')
+
 
     def witaitesting(self):
 
         if self.debugextra:
-            self.logger.debug(u'Wit.Ai test called')
+            self.logger.debug(u'Wit.Ai Create App called')
 
         # create new wit.ai app
         self.main_access_token = self.pluginPrefs.get('main_access_token','')
