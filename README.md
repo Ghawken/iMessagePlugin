@@ -101,8 +101,8 @@ Add Specific Buddy Command Trigger:
 
 Multiple Buddies can be selected and will only trigger if Buddy selected 
 
-![](https://github.com/Ghawken/iMessagePlugin/blob/master/DocumentPics/TriggerSpecificBuddyCommand.png?raw=true)
 
+![](https://raw.githubusercontent.com/Ghawken/iMessagePlugin/wit.ai/DocumentPics/TriggerSpecificBuddyCommand.jpg)
 
 
 
@@ -289,7 +289,7 @@ Update Images Documentation
 ### 0.2.3
 Add Specific Buddy Command Received Trigger:
 
-![](https://github.com/Ghawken/iMessagePlugin/blob/master/DocumentPics/TriggerSpecificBuddyCommand.png?raw=true)
+![](https://raw.githubusercontent.com/Ghawken/iMessagePlugin/wit.ai/DocumentPics/TriggerSpecificBuddyCommand.jpg)
 
 
 Potential bug fix as will Continue checking triggers even if one is triggered (might be multiple triggers same)
