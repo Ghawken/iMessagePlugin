@@ -91,9 +91,9 @@ class Plugin(indigo.PluginBase):
             self.logger.error(u'Error Accessing Temp Directory.')
             pass
 
-
         # if exisits use main_access_token:
         self.main_access_token = self.pluginPrefs.get('main_access_token', '')
+
         if self.main_access_token == '':
             self.access_token = self.pluginPrefs.get('access_token', '')
         else:
@@ -106,7 +106,117 @@ class Plugin(indigo.PluginBase):
         self.configUpdaterInterval = self.pluginPrefs.get('configUpdaterInterval', 24)
         self.configUpdaterForceUpdate = self.pluginPrefs.get('configUpdaterForceUpdate', False)
 
+        oldPluginVersion = pluginPrefs.get('loadedPluginVersion', '')
+        if oldPluginVersion != unicode(pluginVersion):
+            self.logger.info(u'First run of new version, performing some maintenance')
+            self.performPluginUpgradeMaintenance(oldPluginVersion, unicode(pluginVersion))
+
         self.pluginIsInitializing = False
+
+    def performPluginUpgradeMaintenance(self, oldVersion, newVersion):
+        if oldVersion == '':
+            self.logger.info(u'Performing first upgrade/run of version ' + newVersion)
+        else:
+            self.logger.info(u'Performing upgrade from ' + oldVersion + ' to ' + newVersion)
+        try:
+            ## update to multiple users
+            self.backupfilename = os.path.expanduser('~/Documents/Indigo-iMsgBackup/')
+            diriMsgdb = os.path.expanduser('~/Library/Messages/')
+            if os.path.exists(self.backupfilename)==False:
+                os.mkdir(self.backupfilename)
+            self.logger.info(u'Backing up Current iMsg Database Directory to :' + unicode(self.backupfilename))
+            src_files = os.listdir(diriMsgdb)
+            for file_name in src_files:
+                full_filename = os.path.join(diriMsgdb,file_name)
+                if (os.path.isfile(full_filename)):
+                    shutil.copy(full_filename, self.backupfilename)
+                    self.logger.debug(u'Backed up file:'+full_filename)
+        except:
+            self.logger.info(u'Error backing up iMsg Database files')
+            self.logger.info(u'Perhaps Full Disk access not enabled.')
+            self.logger.info(u'See Instructions.')
+            if self.debugexceptions:
+                self.logger.exception(u'and the Caught Exception is:')
+            pass
+
+
+        if self.app_id !='' and self.use_witAi and self.main_access_token !='':
+            self.logger.info(u'Updating Device naming and further Sample data for Wit.Ai Online App now')
+
+            try:
+                array2 = '''{"doc":"Indigo device_name","lookups":["free-text","keywords"],"values":['''
+                # array2 = '''{"values":['''
+                x = 0
+                synomynarray = []
+
+                ## Push all new names and synomyns
+                for device in indigo.devices.itervalues():
+                    if self.wit_alldevices:
+                        description = str(device.description)
+                        if description != '' and description.startswith('witai'):
+                            # okay - just grab the first line
+                            # self.logger.debug(u'Description: String result found:'+unicode(description))
+                            description = description.split('\n', 1)[0]
+                            # firstline, now remove witai
+                            # self.logger.debug(u'Description: First Line only:'+unicode(description))
+                            description = description[6:]
+                            # self.logger.debug(u'Description: New Description equals:'+unicode(description))
+                            # now break up by seperating on | characters
+                            synomynarray = description.split('|')
+                            # self.logger.debug(u'Description: Array now equals:'+unicode(synomynarray))
+
+                        devicename = str(device.name)
+                        array2 = array2 + '''{"value":"''' + devicename + '''","expressions":["''' + devicename + '''",'''
+                        if synomynarray:  # not empty
+                            for synomyn in synomynarray:
+                                array2 = array2 + '''"''' + synomyn + '''",'''
+
+                            del synomynarray[:]
+                        array2 = array2[:-1]
+                        array2 = array2 + '''],"metadata" :  "''' + str(device.id) + '''"},'''
+
+                    else:
+                        description = str(device.description)
+                        if description != '' and description.startswith('witai'):
+                            # okay - just grab the first line
+                            # self.logger.debug(u'Description: String result found:' + unicode(description))
+                            description = description.split('\n', 1)[0]
+                            # firstline, now remove witai
+                            # self.logger.debug(u'Description: First Line only:' + unicode(description))
+                            description = description[6:]
+                            # self.logger.debug(u'Description: New Description equals:' + unicode(description))
+                            # now break up by seperating on | characters
+                            synomynarray = description.split('|')
+                            # .logger.debug(u'Description: Array now equals:' + unicode(synomynarray))
+
+                            devicename = str(device.name)
+                            array2 = array2 + '''{"value":"''' + devicename + '''","expressions":["''' + devicename + '''",'''
+                            if synomynarray:  # not empty
+                                for synomyn in synomynarray:
+                                    array2 = array2 + '''"''' + synomyn + '''",'''
+
+                                del synomynarray[:]
+                            array2 = array2[:-1]
+                            array2 = array2 + '''],"metadata" :  "''' + str(device.id) + '''"},'''
+
+                array2 = array2[:-1] + ']}'
+                # array2 = json.dumps(array2)
+                self.logger.debug(unicode(array2))
+
+                params = {}
+                params['v'] = '20181110'
+                entityput = self.witReq(self.main_access_token, 'PUT', '/entities/device_name', params, array2)
+                self.logger.debug(unicode(entityput))
+
+            except:
+                self.logger.info(u'Error updating new devices...')
+                if self.debugexceptions:
+                    self.logger.exception(u'and caught exception:')
+
+            self.pluginPrefs['loadedPluginVersion'] = newVersion
+            self.logger.info(u'Completed plugin updating/installation for ' + newVersion)
+            return
+
 
 
     def __del__(self):
@@ -241,7 +351,7 @@ class Plugin(indigo.PluginBase):
                                 u'Error checking for update - ? No Internet connection.  Checking again in 24 hours')
                             self.next_update_check = self.next_update_check + 86400
                             if self.debugexceptions:
-                                self.logger.exception(u'Exception:')
+                                self.logger.exception(u'and Caught Exception:')
         except self.StopThread:
             self.debugLog(u'Restarting/or error. Stopping  thread.')
             self.closesql()
@@ -253,26 +363,11 @@ class Plugin(indigo.PluginBase):
         if self.debugextra:
             self.debugLog(u"connectsql() method called.")
         try:
-            ## update to multiple users
-            self.backupfilename = os.path.expanduser('~/Documents/Indigo-iMsgBackup/')
-            diriMsgdb = os.path.expanduser('~/Library/Messages/')
-            if os.path.exists(self.backupfilename)==False:
-                #if os.path.exists(self.backupfilename)==False:
-                os.mkdir(self.backupfilename)
-                self.logger.info(u'Backing up Current iMsg Database Directory to :' + unicode(self.backupfilename))
-                src_files = os.listdir(diriMsgdb)
-                for file_name in src_files:
-                    full_filename = os.path.join(diriMsgdb,file_name)
-                    if (os.path.isfile(full_filename)):
-                        shutil.copy(full_filename, self.backupfilename)
-                        self.logger.debug(u'Backed up file:'+full_filename)
 
             self.filename = os.path.expanduser('~/Library/Messages/chat.db')
             if self.debugextra:
                 self.logger.debug(u'ConnectSQL: Filename location for iMsg chat.db equals:'+unicode(self.filename))
             self.connection = sqlite3.connect(self.filename)
-            if self.debugextra:
-                self.debugLog(u"Connect to Database Successful.")
             self.logger.info(u'Connection to iMsg Database Successful.')
         except:
             self.logger.error(u'Problem connecting to iMessage database....')
@@ -280,7 +375,7 @@ class Plugin(indigo.PluginBase):
             self.logger.error(u'Please see instructions.  This only needs to be done once.')
             self.logger.error(u'Once done please restart the plugin.')
             if self.debugextra:
-                self.logger.exception(u'and here is the Exception (self.debugexceptions is on:)')
+                self.logger.exception(u'and here is the Caught Exception (self.debugexceptions is on:)')
             self.sleep(600)
             return
 
@@ -291,7 +386,7 @@ class Plugin(indigo.PluginBase):
             self.connection.close()
         except:
             if self.debugexceptions:
-                self.logger.exception(u'Exception in closeSql:')
+                self.logger.exception(u'Caught Exception in closeSql:')
             if self.debugextra:
                 self.logger.debug(u'Error in Close Sql - Probably was not connected')
 
@@ -667,7 +762,8 @@ AND datetime(messageT.date/1000000000 + strftime("%s", "2001-01-01") ,"unixepoch
             else:
                 return 'Error. This is no advice.'
         except:
-            self.logger.exception(u'Error getting Joke.  This is no joke.')
+            if self.debugexceptions:
+                self.logger.exception(u'Caught Error getting Joke.  This is no joke.')
             return
 
     def get_joke(self):
@@ -679,7 +775,8 @@ AND datetime(messageT.date/1000000000 + strftime("%s", "2001-01-01") ,"unixepoch
             else:
                 return 'Error. This is no joke.'
         except:
-            self.logger.exception(u'Error getting Joke.  This is no joke.')
+            if self.debugexceptions:
+                self.logger.exception(u'Caught Error getting Joke.  This is no joke.')
             return ''
 
     def get_YN_image(self):
@@ -692,7 +789,8 @@ AND datetime(messageT.date/1000000000 + strftime("%s", "2001-01-01") ,"unixepoch
             else:
                 return 'Error. This is no joke.'
         except:
-            self.logger.exception(u'Error getting Joke.  This is no joke.')
+            if self.debugexceptions:
+                self.logger.exception(u'Error getting Joke.  This is no joke.')
             return ''
 
     def return_insult(self):
@@ -707,7 +805,8 @@ AND datetime(messageT.date/1000000000 + strftime("%s", "2001-01-01") ,"unixepoch
             else:
                 return 'Error. This is no joke.'
         except:
-            self.logger.exception(u'Error getting Insult.  This is no joke.')
+            if self.debugexceptions:
+                self.logger.exception(u'Error getting Insult.  This is no joke.')
             return ''
 
 ######
@@ -788,7 +887,7 @@ AND datetime(messageT.date/1000000000 + strftime("%s", "2001-01-01") ,"unixepoch
                     t.sleep(1.5)
                     self.as_sendpicture(buddy, filetosave)
                 except:
-                    self.logger.exception(u'Exception in Y/N reply')
+                    self.logger.exception(u'Caught Exception in Y/N reply')
                 return
 
             if intent=='advice' and float(intent_confidence)>0.50:
@@ -825,7 +924,7 @@ AND datetime(messageT.date/1000000000 + strftime("%s", "2001-01-01") ,"unixepoch
                         self.logger.info(u'No Device Brightness found:'+unicode(devicetoaction))
 
                 except:
-                    self.logger.exception(u'Exception finding Device.')
+                    self.logger.exception(u'Caught Exception finding Device.')
 
             if intent == 'temperature' and float(intent_confidence)>0.66:
                 self.logger.debug(u'Getting Temperature of Device')
@@ -948,92 +1047,6 @@ AND datetime(messageT.date/1000000000 + strftime("%s", "2001-01-01") ,"unixepoch
 
         return True, valuesDict
 
-
-
-    def setStatestonil(self, dev):
-        if self.debugextra:
-            self.debugLog(u'setStates to nil run')
-
-
-    def refreshDataAction(self, valuesDict):
-        """
-        The refreshDataAction() method refreshes data for all devices based on
-        a plugin menu call.
-        """
-        if self.debugextra:
-            self.debugLog(u"refreshDataAction() method called.")
-        self.refreshData()
-        return True
-
-    def refreshData(self):
-        """
-        The refreshData() method controls the updating of all plugin
-        devices.
-        """
-        if self.debugextra:
-            self.debugLog(u"refreshData() method called.")
-
-        try:
-            # Check to see if there have been any devices created.
-            if indigo.devices.itervalues(filter="self"):
-                if self.debugextra:
-                    self.debugLog(u"Updating data...")
-
-                for dev in indigo.devices.itervalues(filter="self"):
-                    self.refreshDataForDev(dev)
-
-            else:
-                indigo.server.log(u"No Client devices have been created.")
-
-            return True
-
-        except Exception as error:
-            self.errorLog(u"Error refreshing devices. Please check settings.")
-            self.errorLog(unicode(error.message))
-            return False
-
-    def refreshDataForDev(self, dev):
-
-        if dev.configured:
-            if self.debugextra:
-                self.debugLog(u"Found configured device: {0}".format(dev.name))
-
-            if dev.enabled:
-                if self.debugextra:
-                    self.debugLog(u"   {0} is enabled.".format(dev.name))
-                timeDifference = int(t.time() - t.mktime(dev.lastChanged.timetuple()))
-
-            else:
-                if self.debugextra:
-                    self.debugLog(u"    Disabled: {0}".format(dev.name))
-
-
-    def refreshDataForDevAction(self, valuesDict):
-        """
-        The refreshDataForDevAction() method refreshes data for a selected device based on
-        a plugin menu call.
-        """
-        if self.debugextra:
-            self.debugLog(u"refreshDataForDevAction() method called.")
-
-        dev = indigo.devices[valuesDict.deviceId]
-
-        self.refreshDataForDev(dev)
-        return True
-
-    def stopSleep(self, start_sleep):
-        """
-        The stopSleep() method accounts for changes to the user upload interval
-        preference. The plugin checks every 2 seconds to see if the sleep
-        interval should be updated.
-        """
-        try:
-            total_sleep = float(self.pluginPrefs.get('configMenuUploadInterval', 300))
-        except:
-            total_sleep = iTimer  # TODO: Note variable iTimer is an unresolved reference.
-        if t.time() - start_sleep > total_sleep:
-            return True
-        return False
 ##########
 #           Action Groups
 ##########
@@ -1085,14 +1098,14 @@ AND datetime(messageT.date/1000000000 + strftime("%s", "2001-01-01") ,"unixepoch
                     self.logger.error(u'An error occured sending to buddy Handle:  '+unicode(buddyHandle))
                     self.logger.error(u'It seems the buddy Handle is not correct.')
                     if self.debugexceptions:
-                        self.logger.exception(u'Exception:')
+                        self.logger.exception(u'Caught Exception:')
                 else:
                     self.logger.error(u'An Error occured within the iMsg AppleScript component - ScriptError')
                     self.logger.error(u'The Error was :'+unicode(ex))
                     if self.debugexceptions:
-                        self.logger.exception(u'Exception:')
+                        self.logger.exception(u'Caught Exception:')
             else:
-                self.logger.exception(u'An unhandled exception was caught here from SendiMsgQuestion:'+unicode(ex))
+                self.logger.exception(u'An unhandled caught exception was caught here from SendiMsgQuestion:'+unicode(ex))
         return
 
 
@@ -1123,12 +1136,12 @@ AND datetime(messageT.date/1000000000 + strftime("%s", "2001-01-01") ,"unixepoch
                     self.logger.error(u'An error occured sending to buddy Handle:  '+unicode(buddyHandle))
                     self.logger.error(u'It seems the buddy Handle is not correct.')
                     if self.debugexceptions:
-                        self.logger.exception(u'Exception:')
+                        self.logger.exception(u'Caught Exception:')
                 else:
                     self.logger.error(u'An Error occured within the iMsg AppleScript component - ScriptError')
                     self.logger.error(u'The Error was :'+unicode(ex))
                     if self.debugexceptions:
-                        self.logger.exception(u'Exception:')
+                        self.logger.exception(u'Caught Exception:')
             else:
                 self.logger.exception(u'An unhandled exception was caught here from SendiMsg:'+unicode(ex))
         return
@@ -1164,14 +1177,14 @@ AND datetime(messageT.date/1000000000 + strftime("%s", "2001-01-01") ,"unixepoch
                     self.logger.error(u'An error occured sending to buddy Handle:  ' + unicode(buddyHandle))
                     self.logger.error(u'It seems the buddy Handle is not correct.')
                     if self.debugexceptions:
-                        self.logger.exception(u'Exception:')
+                        self.logger.exception(u'Caught Exception:')
                 else:
                     self.logger.error(u'An Error occured within the iMsg AppleScript component - ScriptError')
                     self.logger.error(u'The Error was :' + unicode(ex))
                     if self.debugexceptions:
-                        self.logger.exception(u'Exception:')
+                        self.logger.exception(u'Caught Exception:')
             else:
-                self.logger.exception(u'An unhandled exception was caught here from SendiMsg:' + unicode(ex))
+                self.logger.exception(u'An unhandled Caught exception was caught here from SendiMsg:' + unicode(ex))
         return
 
 
@@ -1203,19 +1216,19 @@ AND datetime(messageT.date/1000000000 + strftime("%s", "2001-01-01") ,"unixepoch
                     self.logger.error(u'An error occured sending to buddy Handle:  '+unicode(buddyHandle))
                     self.logger.error(u'It seems the buddy Handle is not correct.')
                     if self.debugexceptions:
-                        self.logger.exception(u'Exception:')
+                        self.logger.exception(u'Caught Exception:')
                 elif "Can?t get POSIX" in str(ex):
                     self.logger.error(u'An error occured sending to buddy :  '+unicode(buddyHandle))
                     self.logger.error(u'It seems that the File is not readable?  File given:'+unicode(theMessage))
                     if self.debugexceptions:
-                        self.logger.exception(u'Exception:')
+                        self.logger.exception(u'Caught Exception:')
                 else:
                     self.logger.error(u'An Error occured within the iMsg AppleScript component - ScriptError')
                     self.logger.error(u'The Error was :'+unicode(ex))
                     if self.debugexceptions:
-                        self.logger.exception(u'Exception:')
+                        self.logger.exception(u'Caught Exception:')
             else:
-                self.logger.exception(u'An unhandled exception was caught here from SendiMsgPicture:'+unicode(ex))
+                self.logger.exception(u'An unhandled Caught exception was caught here from SendiMsgPicture:'+unicode(ex))
 
         return
 
@@ -1255,19 +1268,19 @@ AND datetime(messageT.date/1000000000 + strftime("%s", "2001-01-01") ,"unixepoch
                     self.logger.error(u'An error occured sending to buddy Handle:  '+unicode(buddyHandle))
                     self.logger.error(u'It seems the buddy Handle is not correct.')
                     if self.debugexceptions:
-                        self.logger.exception(u'Exception:')
+                        self.logger.exception(u'Caught Exception:')
                 elif "Can?t get POSIX" in str(ex):
                     self.logger.error(u'An error occured sending to buddy :  '+unicode(buddyHandle))
                     self.logger.error(u'It seems that the File is not readable?  File given:'+unicode(theMessage))
                     if self.debugexceptions:
-                        self.logger.exception(u'Exception:')
+                        self.logger.exception(u'Caught Exception:')
                 else:
                     self.logger.error(u'An Error occured within the iMsg AppleScript component - ScriptError')
                     self.logger.error(u'The Error was :'+unicode(ex))
                     if self.debugexceptions:
-                        self.logger.exception(u'Exception:')
+                        self.logger.exception(u'Caught Exception:')
             else:
-                self.logger.exception(u'An unhandled exception was caught here from SendiMsgPicture:'+unicode(ex))
+                self.logger.exception(u'An unhandled Caught exception was caught here from SendiMsgPicture:'+unicode(ex))
 
         return
 #########
@@ -1588,8 +1601,6 @@ AND datetime(messageT.date/1000000000 + strftime("%s", "2001-01-01") ,"unixepoch
                 if synomynarray:   # not empty
                     for synomyn in synomynarray:
                         array2 = array2 + '''"''' + synomyn + '''",'''
-
-
                     del synomynarray[:]
                 array2 = array2[:-1]
                 array2 = array2 + '''],"metadata" :  "''' + str(device.id) + '''"},'''
@@ -1966,7 +1977,7 @@ AND datetime(messageT.date/1000000000 + strftime("%s", "2001-01-01") ,"unixepoch
                 if trigger.pluginTypeId == "specificBuddycommandReceived" and triggertype == 'commandReceived':
                     if self.debugtriggers:
                         self.logger.debug(u'Trigger PluginProps: Specific CommandCalled:'+unicode(trigger.pluginProps['commandCalled']))
-                    if buddy in trigger.pluginProps['buddyId']:  # checking buddy in list of options
+                    if buddy in trigger.pluginProps['buddyId'] and trigger.pluginProps['commandCalled'] == (str(imsgcmdreceived).lower()):  # checking buddy in list of options
                         if self.debugtriggers:
                             self.logger.debug(u'Buddy Found:'+unicode(buddy)+' and Buddy in allowed list for trigger:'+unicode(trigger.pluginProps['buddyId'])+' Specific Command Called:' + unicode(trigger.pluginProps['commandCalled']))
                         indigo.trigger.execute(trigger)
@@ -1976,7 +1987,7 @@ AND datetime(messageT.date/1000000000 + strftime("%s", "2001-01-01") ,"unixepoch
 
         except:
             if self.debugexceptions:
-                self.logger.exception(u'Exception within Trigger Check:')
+                self.logger.exception(u'Caught Exception within Trigger Check:')
             if self.debugextra:
                 self.logger.debug(u'Exception within Trigger Check')
             return False
