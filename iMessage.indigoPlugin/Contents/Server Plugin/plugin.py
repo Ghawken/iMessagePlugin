@@ -81,7 +81,7 @@ class Plugin(indigo.PluginBase):
         MAChome = os.path.expanduser("~") + "/"
         folderLocation = MAChome + "Documents/Indigo-iMessagePlugin/"
         self.saveDirectory = folderLocation
-
+        self.backupfilename = os.path.expanduser('~/Documents/Indigo-iMsgBackup/')
         self.logger.debug(u'Self.SaveDirectory equals:'+unicode(self.saveDirectory))
 
         try:
@@ -224,6 +224,8 @@ class Plugin(indigo.PluginBase):
             self.debugLog(u"__del__ method called.")
         indigo.PluginBase.__del__(self)
 
+
+
     def closedPrefsConfigUi(self, valuesDict, userCancelled):
         if self.debugextra:
             self.debugLog(u"closedPrefsConfigUi() method called.")
@@ -255,13 +257,13 @@ class Plugin(indigo.PluginBase):
             self.logger.debug(u"logLevel = " + str(self.logLevel))
             self.logger.debug(u"User prefs saved.")
             self.logger.debug(u"Debugging on (Level: {0})".format(self.logLevel))
-            self.access_token = valuesDict.get('access_token','')
-            # if exisits use main_access_token:
-            self.main_access_token = valuesDict.get('main_access_token', '')
-            if self.main_access_token == '':
-                self.access_token = valuesDict.get('access_token', '')
-            else:
-                self.access_token = self.main_access_token
+
+            self.logger.debug(u"{0:=^130}".format(""))
+            self.logger.debug(u'----------- Closed Prefs Config UI ----------------')
+            self.logger.debug(unicode(self.pluginPrefs))
+            self.logger.debug(u"{0:=^130}".format(""))
+            self.logger.debug(unicode(valuesDict))
+
 
         return True
 
@@ -1038,11 +1040,28 @@ AND datetime(messageT.date/1000000000 + strftime("%s", "2001-01-01") ,"unixepoch
         self.updater = GitHubPluginUpdater(self)
 
     def validatePrefsConfigUi(self, valuesDict):
-        if self.debugextra:
-            self.debugLog(u"validatePrefsConfigUi() method called.")
 
         error_msg_dict = indigo.Dict()
+        if self.debugextra:
+            self.debugLog(u"ValidatePrefsConfigUi() method called.")
+        self.access_token = valuesDict.get('access_token', '')
+        # if exisits use main_access_token:
 
+        # self.main_access_token = valuesDict.get('main_access_token', '')
+
+        if self.main_access_token == '':
+            # self.access_token = valuesDict.get('access_token', '')
+            self.logger.debug(u'Access_Token:' + unicode(self.access_token))
+        else:
+            self.access_token = self.main_access_token
+            valuesDict['main_access_token'] = self.main_access_token
+            valuesDict['app_id'] = self.app_id
+            self.logger.debug(u'Main_Access_Token:' + unicode(self.access_token))
+
+        self.logger.debug(u"{0:=^130}".format(""))
+        self.logger.debug(unicode(self.pluginPrefs))
+        self.logger.debug(u"{0:=^130}".format(""))
+        self.logger.debug(unicode(valuesDict))
         # self.errorLog(u"Plugin configuration error: ")
 
         return True, valuesDict
@@ -1315,7 +1334,11 @@ AND datetime(messageT.date/1000000000 + strftime("%s", "2001-01-01") ,"unixepoch
         WIT_API_VERSION =  '20170307'
         full_url = WIT_API_HOST + path
         DEFAULT_MAX_STEPS = 5
+
+
         self.logger.debug('%s %s %s', meth, full_url, params)
+        self.logger.debug(u'Using Access_token:'+unicode(access_token))
+
         headers = {
             'authorization': 'Bearer ' + access_token,
             'accept': 'application/vnd.wit.' + WIT_API_VERSION + '+json'
@@ -1423,35 +1446,49 @@ AND datetime(messageT.date/1000000000 + strftime("%s", "2001-01-01") ,"unixepoch
 
         if self.debugextra:
             self.logger.debug(u'Thread Delete Wit.ai App Started..')
+        try:
+            self.main_access_token = self.pluginPrefs.get('main_access_token','')
 
-        self.main_access_token = indigo.activePlugin.pluginPrefs.get('main_access_token','')
+            self.logger.debug(u'self.main_access_token equals:' + unicode(self.main_access_token))
 
-        self.logger.debug(u'self.main_access_token equals:' + unicode(self.main_access_token))
-        if self.main_access_token == '':
-            self.access_token = indigo.activePlugin.pluginPrefs.get('access_token','')
-        else:
-            self.access_token = self.main_access_token
+            if self.main_access_token == '':
+                self.access_token = self.pluginPrefs.get('access_token','')
+            else:
+                self.access_token = self.main_access_token
 
-        self.logger.debug(u'self.access_token equals:' + unicode(self.access_token))
+            self.logger.debug(u'self.access_token equals:' + unicode(self.access_token))
 
-        checkappexists = self.wit_getappid(self.access_token)
-        if checkappexists == False:
-            self.logger.info(u'No Wit.Ai App appears to exist.')
-        else:
-            delete_app = self.wit_deleteapp(self.access_token)
-            self.logger.debug(unicode(delete_app))
+            checkappexists = self.wit_getappid(self.access_token)
 
-        indigo.activePlugin.pluginPrefs['main_access_token']=''
-        indigo.activePlugin.pluginPrefs['app_id']=''
-        indigo.server.savePluginPrefs()
-        return
+            if checkappexists == False:
+                self.logger.info(u'No Wit.Ai App appears to exist.')
+            else:
+                delete_app = self.wit_deleteapp(self.access_token)
+                self.logger.debug(unicode(delete_app))
+
+            self.pluginPrefs['main_access_token']= ''
+            self.pluginPrefs['app_id']= ''
+            self.savePluginPrefs()
+            self.main_access_token = ''
+            return
+
+        except:
+            self.logger.info(u'Error within Delete app: Resetting all access tokens.')
+            self.pluginPrefs['main_access_token'] = ''
+            self.pluginPrefs['app_id']= ''
+            self.savePluginPrefs()
+            self.main_access_token = ''
+            self.access_token = ''
+            if self.debugexceptions:
+                self.logger.exception(u'Exception in Delete App')
+            return
 
     def wit_updateDevices(self, valuesDict):
 
         if self.debugextra:
             self.logger.debug(u'Wit.Ai Update called')
         if self.main_access_token == '':
-            self.access_token = indigo.activePlugin.pluginPrefs.get('access_token','')
+            self.access_token = self.pluginPrefs.get('access_token','')
         else:
             self.access_token = self.main_access_token
 
@@ -1469,43 +1506,21 @@ AND datetime(messageT.date/1000000000 + strftime("%s", "2001-01-01") ,"unixepoch
 
 ## Push all new names and synomyns
         for device in indigo.devices.itervalues():
-            if self.wit_alldevices:
-                description = str(device.description)
-                if description != '' and description.startswith('witai'):
-                    # okay - just grab the first line
-                    # self.logger.debug(u'Description: String result found:'+unicode(description))
-                    description = description.split('\n', 1)[0]
-                    # firstline, now remove witai
-                    # self.logger.debug(u'Description: First Line only:'+unicode(description))
-                    description = description[6:]
-                    # self.logger.debug(u'Description: New Description equals:'+unicode(description))
-                    # now break up by seperating on | characters
-                    synomynarray = description.split('|')
-                    # self.logger.debug(u'Description: Array now equals:'+unicode(synomynarray))
+            if device.enabled:
 
-                devicename = str(device.name)
-                array2 = array2 + '''{"value":"''' + devicename + '''","expressions":["''' + devicename + '''",'''
-                if synomynarray:  # not empty
-                    for synomyn in synomynarray:
-                        array2 = array2 + '''"''' + synomyn + '''",'''
-
-                    del synomynarray[:]
-                array2 = array2[:-1]
-                array2 = array2 + '''],"metadata" :  "''' + str(device.id) + '''"},'''
-
-            else:
-                description = str(device.description)
-                if description != '' and description.startswith('witai'):
-                    # okay - just grab the first line
-                    # self.logger.debug(u'Description: String result found:' + unicode(description))
-                    description = description.split('\n', 1)[0]
-                    # firstline, now remove witai
-                    # self.logger.debug(u'Description: First Line only:' + unicode(description))
-                    description = description[6:]
-                    # self.logger.debug(u'Description: New Description equals:' + unicode(description))
-                    # now break up by seperating on | characters
-                    synomynarray = description.split('|')
-                    # .logger.debug(u'Description: Array now equals:' + unicode(synomynarray))
+                if self.wit_alldevices:
+                    description = str(device.description)
+                    if description != '' and description.startswith('witai'):
+                        # okay - just grab the first line
+                        # self.logger.debug(u'Description: String result found:'+unicode(description))
+                        description = description.split('\n', 1)[0]
+                        # firstline, now remove witai
+                        # self.logger.debug(u'Description: First Line only:'+unicode(description))
+                        description = description[6:]
+                        # self.logger.debug(u'Description: New Description equals:'+unicode(description))
+                        # now break up by seperating on | characters
+                        synomynarray = description.split('|')
+                        # self.logger.debug(u'Description: Array now equals:'+unicode(synomynarray))
 
                     devicename = str(device.name)
                     array2 = array2 + '''{"value":"''' + devicename + '''","expressions":["''' + devicename + '''",'''
@@ -1516,6 +1531,30 @@ AND datetime(messageT.date/1000000000 + strftime("%s", "2001-01-01") ,"unixepoch
                         del synomynarray[:]
                     array2 = array2[:-1]
                     array2 = array2 + '''],"metadata" :  "''' + str(device.id) + '''"},'''
+
+                else:
+                    description = str(device.description)
+                    if description != '' and description.startswith('witai'):
+                        # okay - just grab the first line
+                        # self.logger.debug(u'Description: String result found:' + unicode(description))
+                        description = description.split('\n', 1)[0]
+                        # firstline, now remove witai
+                        # self.logger.debug(u'Description: First Line only:' + unicode(description))
+                        description = description[6:]
+                        # self.logger.debug(u'Description: New Description equals:' + unicode(description))
+                        # now break up by seperating on | characters
+                        synomynarray = description.split('|')
+                        # .logger.debug(u'Description: Array now equals:' + unicode(synomynarray))
+
+                        devicename = str(device.name)
+                        array2 = array2 + '''{"value":"''' + devicename + '''","expressions":["''' + devicename + '''",'''
+                        if synomynarray:  # not empty
+                            for synomyn in synomynarray:
+                                array2 = array2 + '''"''' + synomyn + '''",'''
+
+                            del synomynarray[:]
+                        array2 = array2[:-1]
+                        array2 = array2 + '''],"metadata" :  "''' + str(device.id) + '''"},'''
 
         array2 = array2[:-1] + ']}'
         # array2 = json.dumps(array2)
@@ -1551,14 +1590,18 @@ AND datetime(messageT.date/1000000000 + strftime("%s", "2001-01-01") ,"unixepoch
 
         if self.debugextra:
             self.logger.debug(u'Wit.Ai Create App called')
+        self.logger.debug(u'********** Main Access Token: Equals:'+self.main_access_token)
 
         # create new wit.ai app
         self.main_access_token = self.pluginPrefs.get('main_access_token','')
+        self.logger.debug(u'********** Main Access Token: Equals:' + self.main_access_token)
 
         if self.main_access_token == '':
-            self.access_token = indigo.activePlugin.pluginPrefs.get('access_token','')
+            self.access_token = self.pluginPrefs.get('access_token','')
         else:
             self.access_token = self.main_access_token
+
+        self.logger.debug(u'********** Access Token: Equals:' + self.access_token)
 
         # check apps
         checkappexists = self.wit_getappid(self.access_token)
@@ -1566,9 +1609,13 @@ AND datetime(messageT.date/1000000000 + strftime("%s", "2001-01-01") ,"unixepoch
             # no app exisits
             # create & get new access_token
             self.wit_createapp(self.access_token)
-            indigo.activePlugin.pluginPrefs['main_access_token'] = self.access_token
-            indigo.server.savePluginPrefs()
             self.wit_createentity(self.access_token, 'device_name')
+
+        if checkappexists:
+            self.logger.info(u'Wit.Ai App already exists.  Please use the update Button instead.')
+            self.logger.info(u'or alternatively to start again.  Please delete button and recreate.')
+            return
+
         base =[]
         lookup = '{"lookups":["free-text", "keywords"]}'
         #self.wit_deleteentity(self.access_token,'device_name')
@@ -1585,52 +1632,53 @@ AND datetime(messageT.date/1000000000 + strftime("%s", "2001-01-01") ,"unixepoch
         synomynarray = []
 
         for device in indigo.devices.itervalues():
-            if self.wit_alldevices:
-                description = str(device.description)
-                if description != '' and description.startswith('witai'):
-                    # okay - just grab the first line
-                    #self.logger.debug(u'Description: String result found:'+unicode(description))
-                    description = description.split('\n',1)[0]
-                    # firstline, now remove witai
-                    #self.logger.debug(u'Description: First Line only:'+unicode(description))
-                    description = description[6:]
-                    #self.logger.debug(u'Description: New Description equals:'+unicode(description))
-                    # now break up by seperating on | characters
-                    synomynarray = description.split('|')
-                    #self.logger.debug(u'Description: Array now equals:'+unicode(synomynarray))
-
-                devicename = str(device.name)
-                array2 = array2 + '''{"value":"'''+devicename+'''","expressions":["'''+devicename+'''",'''
-                if synomynarray:   # not empty
-                    for synomyn in synomynarray:
-                        array2 = array2 + '''"''' + synomyn + '''",'''
-                    del synomynarray[:]
-                array2 = array2[:-1]
-                array2 = array2 + '''],"metadata" :  "''' + str(device.id) + '''"},'''
-
-            else:
-                description = str(device.description)
-                if description != '' and description.startswith('witai'):
-                    # okay - just grab the first line
-                    #self.logger.debug(u'Description: String result found:' + unicode(description))
-                    description = description.split('\n', 1)[0]
-                    # firstline, now remove witai
-                    #self.logger.debug(u'Description: First Line only:' + unicode(description))
-                    description = description[6:]
-                    #self.logger.debug(u'Description: New Description equals:' + unicode(description))
-                    # now break up by seperating on | characters
-                    synomynarray = description.split('|')
-                    #.logger.debug(u'Description: Array now equals:' + unicode(synomynarray))
+            if device.enabled:
+                if self.wit_alldevices:
+                    description = str(device.description)
+                    if description != '' and description.startswith('witai'):
+                        # okay - just grab the first line
+                        #self.logger.debug(u'Description: String result found:'+unicode(description))
+                        description = description.split('\n',1)[0]
+                        # firstline, now remove witai
+                        #self.logger.debug(u'Description: First Line only:'+unicode(description))
+                        description = description[6:]
+                        #self.logger.debug(u'Description: New Description equals:'+unicode(description))
+                        # now break up by seperating on | characters
+                        synomynarray = description.split('|')
+                        #self.logger.debug(u'Description: Array now equals:'+unicode(synomynarray))
 
                     devicename = str(device.name)
-                    array2 = array2 + '''{"value":"''' + devicename + '''","expressions":["''' + devicename + '''",'''
-                    if synomynarray:  # not empty
+                    array2 = array2 + '''{"value":"'''+devicename+'''","expressions":["'''+devicename+'''",'''
+                    if synomynarray:   # not empty
                         for synomyn in synomynarray:
                             array2 = array2 + '''"''' + synomyn + '''",'''
-
                         del synomynarray[:]
                     array2 = array2[:-1]
                     array2 = array2 + '''],"metadata" :  "''' + str(device.id) + '''"},'''
+
+                else:
+                    description = str(device.description)
+                    if description != '' and description.startswith('witai'):
+                        # okay - just grab the first line
+                        #self.logger.debug(u'Description: String result found:' + unicode(description))
+                        description = description.split('\n', 1)[0]
+                        # firstline, now remove witai
+                        #self.logger.debug(u'Description: First Line only:' + unicode(description))
+                        description = description[6:]
+                        #self.logger.debug(u'Description: New Description equals:' + unicode(description))
+                        # now break up by seperating on | characters
+                        synomynarray = description.split('|')
+                        #.logger.debug(u'Description: Array now equals:' + unicode(synomynarray))
+
+                        devicename = str(device.name)
+                        array2 = array2 + '''{"value":"''' + devicename + '''","expressions":["''' + devicename + '''",'''
+                        if synomynarray:  # not empty
+                            for synomyn in synomynarray:
+                                array2 = array2 + '''"''' + synomyn + '''",'''
+
+                            del synomynarray[:]
+                        array2 = array2[:-1]
+                        array2 = array2 + '''],"metadata" :  "''' + str(device.id) + '''"},'''
 
 
         array2 = array2[:-1] + ']}'
@@ -1642,84 +1690,26 @@ AND datetime(messageT.date/1000000000 + strftime("%s", "2001-01-01") ,"unixepoch
         entityput = self.witReq(self.access_token, 'PUT', '/entities/device_name', params, array2)
         self.logger.debug(unicode(entityput))
 
+
         t.sleep(10)
 
         for device in indigo.devices.itervalues():
-            if self.wit_alldevices:
-                self.logger.debug(u'Okay - sending all device details to help with parsing...')
-                if hasattr(device, "displayStateValRaw") and device.displayStateValRaw in ['0',False,True] :
-                    x=x+4
-                    devicename = str(device.name)
-                    array = '''{"text":"Turn on '''+ devicename +'''","entities":[{"entity":"intent","value":"device_action"},{"entity":"wit$on_off","value":"true"},{"entity":"device_name","value":"'''+devicename+'''"}]}'''
-                    base.append(json.loads(array))
-                    array = '''{"text":"'''+ devicename +''' on","entities":[{"entity":"intent","value":"device_action"},{"entity":"wit$on_off","value":"true"},{"entity":"device_name","value":"'''+devicename+'''"}]}'''
-                    base.append(json.loads(array))
-                    array = '''{"text":"Turn off '''+ devicename +'''","entities":[{"entity":"intent","value":"device_action"},{"entity":"wit$on_off","value":"false"},{"entity":"device_name","value":"'''+devicename+'''"}]}'''
-                    base.append(json.loads(array))
-                    array = '''{"text":"'''+ devicename +''' off","entities":[{"entity":"intent","value":"device_action"},{"entity":"wit$on_off","value":"false"},{"entity":"device_name","value":"'''+devicename+'''"}]}'''
-                    base.append(json.loads(array))
-                if 'temperature' in device.states or 'Temperature' in device.states or device.deviceTypeId=='Temperature' or (hasattr(device, 'subModel') and device.subModel=='Temperature'):
-                    x=x+4
-                    devicename = str(device.name)
-                    array = '''{"text":"What is the temperature of the ''' + devicename + '''","entities":[{"entity":"intent","value":"temperature"},{"entity":"device_name","value":"''' + devicename + '''"}]}'''
-                    base.append(json.loads(array))
-                    array = '''{"text":"Tell me the temperature of the ''' + devicename + '''","entities":[{"entity":"intent","value":"temperature"},{"entity":"device_name","value":"''' + devicename + '''"}]}'''
-                    base.append(json.loads(array))
-                    array = '''{"text":"''' + devicename + ''' temperature? ","entities":[{"entity":"intent","value":"temperature"},{"entity":"device_name","value":"''' + devicename + '''"}]}'''
-                    base.append(json.loads(array))
-                    array = '''{"text":"How hot is ''' + devicename + '''","entities":[{"entity":"intent","value":"temperature"},{"entity":"device_name","value":"''' + devicename + '''"}]}'''
-                    base.append(json.loads(array))
-                if device.pluginId == 'com.GlennNZ.indigoplugin.FindFriendsMini' and device.model =='FindFriends Device':
-                    x=x+4
-                    devicename = str(device.name)
-                    address = device.states['address']
-                    array = '''{"text":"Where is ''' + devicename + '''","entities":[{"entity":"intent","value":"location"},{"entity":"device_name","value":"''' + devicename + '''"}]}'''
-                    base.append(json.loads(array))
-                    array = '''{"text":"Locate ''' + devicename + '''","entities":[{"entity":"intent","value":"location"},{"entity":"device_name","value":"''' + devicename + '''"}]}'''
-                    base.append(json.loads(array))
-                    array = '''{"text":"Find the location of ''' + devicename + '''","entities":[{"entity":"intent","value":"location"},{"entity":"device_name","value":"''' + devicename + '''"}]}'''
-                    base.append(json.loads(array))
-                    array = '''{"text":"Find ''' + devicename + ''' whereabouts","entities":[{"entity":"intent","value":"location"},{"entity":"device_name","value":"''' + devicename + '''"}]}'''
-                    base.append(json.loads(array))
-
-                if 'brightnessLevel' in device.states:
-                    x = x + 6
-                    devicename = str(device.name)
-                    array = '''{"text":"Dim ''' + devicename + ''' to 10%","entities":[{"entity":"intent","value":"dim_set"},{"entity":"device_name","value":"''' + devicename + '''"},{"entity":"wit$number","value":"10"}]}'''
-                    base.append(json.loads(array))
-                    array = '''{"text":"Set ''' + devicename + ''' to 10% dim","entities":[{"entity":"intent","value":"dim_set"},{"entity":"device_name","value":"''' + devicename + '''"},{"entity":"wit$number","value":"10"}]}'''
-                    base.append(json.loads(array))
-                    array = '''{"text":"Dim ''' + devicename + ''' to 60%","entities":[{"entity":"intent","value":"dim_set"},{"entity":"device_name","value":"''' + devicename + '''"},{"entity":"wit$number","value":"60"}]}'''
-                    base.append(json.loads(array))
-                    array = '''{"text":"Set ''' + devicename + ''' to 60% brightness","entities":[{"entity":"intent","value":"dim_set"},{"entity":"device_name","value":"''' + devicename + '''"},{"entity":"wit$number","value":"60"}]}'''
-                    base.append(json.loads(array))
-                    array = '''{"text":"Set ''' + devicename + ''' to 10% brightness","entities":[{"entity":"intent","value":"dim_set"},{"entity":"device_name","value":"''' + devicename + '''"},{"entity":"wit$number","value":"10"}]}'''
-                    base.append(json.loads(array))
-
-                if x > 185:
-                    jsonbase = json.dumps(base)
-                    replyend = self.witReq(self.access_token, 'POST', '/samples', '', jsonbase)
-                    self.logger.debug(unicode(jsonbase))
-                    self.logger.debug(unicode(replyend))
-                    x = 0
-                    del base[:]
-                    self.sleep(71)
-            else:
-                description = str(device.description)
-                if description != '' and description.startswith('witai'):
-                    x = x + 4
-                    devicename = str(device.name)
-                    array = '''{"text":"Turn on ''' + devicename + '''","entities":[{"entity":"intent","value":"device_action"},{"entity":"wit$on_off","value":"true"},{"entity":"device_name","value":"''' + devicename + '''"}]}'''
-                    base.append(json.loads(array))
-                    array = '''{"text":"''' + devicename + ''' on","entities":[{"entity":"intent","value":"device_action"},{"entity":"wit$on_off","value":"true"},{"entity":"device_name","value":"''' + devicename + '''"}]}'''
-                    base.append(json.loads(array))
-                    array = '''{"text":"Turn off ''' + devicename + '''","entities":[{"entity":"intent","value":"device_action"},{"entity":"wit$on_off","value":"false"},{"entity":"device_name","value":"''' + devicename + '''"}]}'''
-                    base.append(json.loads(array))
-                    array = '''{"text":"''' + devicename + ''' off","entities":[{"entity":"intent","value":"device_action"},{"entity":"wit$on_off","value":"false"},{"entity":"device_name","value":"''' + devicename + '''"}]}'''
-                    base.append(json.loads(array))
-
+            if device.enabled:
+                if self.wit_alldevices:
+                    self.logger.debug(u'Okay - sending all device details to help with parsing...')
+                    if hasattr(device, "displayStateValRaw") and device.displayStateValRaw in ['0',False,True] :
+                        x=x+4
+                        devicename = str(device.name)
+                        array = '''{"text":"Turn on '''+ devicename +'''","entities":[{"entity":"intent","value":"device_action"},{"entity":"wit$on_off","value":"true"},{"entity":"device_name","value":"'''+devicename+'''"}]}'''
+                        base.append(json.loads(array))
+                        array = '''{"text":"'''+ devicename +''' on","entities":[{"entity":"intent","value":"device_action"},{"entity":"wit$on_off","value":"true"},{"entity":"device_name","value":"'''+devicename+'''"}]}'''
+                        base.append(json.loads(array))
+                        array = '''{"text":"Turn off '''+ devicename +'''","entities":[{"entity":"intent","value":"device_action"},{"entity":"wit$on_off","value":"false"},{"entity":"device_name","value":"'''+devicename+'''"}]}'''
+                        base.append(json.loads(array))
+                        array = '''{"text":"'''+ devicename +''' off","entities":[{"entity":"intent","value":"device_action"},{"entity":"wit$on_off","value":"false"},{"entity":"device_name","value":"'''+devicename+'''"}]}'''
+                        base.append(json.loads(array))
                     if 'temperature' in device.states or 'Temperature' in device.states or device.deviceTypeId=='Temperature' or (hasattr(device, 'subModel') and device.subModel=='Temperature'):
-                        x = x + 4
+                        x=x+4
                         devicename = str(device.name)
                         array = '''{"text":"What is the temperature of the ''' + devicename + '''","entities":[{"entity":"intent","value":"temperature"},{"entity":"device_name","value":"''' + devicename + '''"}]}'''
                         base.append(json.loads(array))
@@ -1729,8 +1719,8 @@ AND datetime(messageT.date/1000000000 + strftime("%s", "2001-01-01") ,"unixepoch
                         base.append(json.loads(array))
                         array = '''{"text":"How hot is ''' + devicename + '''","entities":[{"entity":"intent","value":"temperature"},{"entity":"device_name","value":"''' + devicename + '''"}]}'''
                         base.append(json.loads(array))
-                    if device.pluginId == 'com.GlennNZ.indigoplugin.FindFriendsMini' and device.model == 'FindFriends Device':
-                        x = x + 4
+                    if device.pluginId == 'com.GlennNZ.indigoplugin.FindFriendsMini' and device.model =='FindFriends Device':
+                        x=x+4
                         devicename = str(device.name)
                         address = device.states['address']
                         array = '''{"text":"Where is ''' + devicename + '''","entities":[{"entity":"intent","value":"location"},{"entity":"device_name","value":"''' + devicename + '''"}]}'''
@@ -1755,6 +1745,66 @@ AND datetime(messageT.date/1000000000 + strftime("%s", "2001-01-01") ,"unixepoch
                         base.append(json.loads(array))
                         array = '''{"text":"Set ''' + devicename + ''' to 10% brightness","entities":[{"entity":"intent","value":"dim_set"},{"entity":"device_name","value":"''' + devicename + '''"},{"entity":"wit$number","value":"10"}]}'''
                         base.append(json.loads(array))
+
+                    if x > 185:
+                        jsonbase = json.dumps(base)
+                        replyend = self.witReq(self.access_token, 'POST', '/samples', '', jsonbase)
+                        self.logger.debug(unicode(jsonbase))
+                        self.logger.debug(unicode(replyend))
+                        x = 0
+                        del base[:]
+                        self.sleep(71)
+                else:
+                    description = str(device.description)
+                    if description != '' and description.startswith('witai'):
+                        x = x + 4
+                        devicename = str(device.name)
+                        array = '''{"text":"Turn on ''' + devicename + '''","entities":[{"entity":"intent","value":"device_action"},{"entity":"wit$on_off","value":"true"},{"entity":"device_name","value":"''' + devicename + '''"}]}'''
+                        base.append(json.loads(array))
+                        array = '''{"text":"''' + devicename + ''' on","entities":[{"entity":"intent","value":"device_action"},{"entity":"wit$on_off","value":"true"},{"entity":"device_name","value":"''' + devicename + '''"}]}'''
+                        base.append(json.loads(array))
+                        array = '''{"text":"Turn off ''' + devicename + '''","entities":[{"entity":"intent","value":"device_action"},{"entity":"wit$on_off","value":"false"},{"entity":"device_name","value":"''' + devicename + '''"}]}'''
+                        base.append(json.loads(array))
+                        array = '''{"text":"''' + devicename + ''' off","entities":[{"entity":"intent","value":"device_action"},{"entity":"wit$on_off","value":"false"},{"entity":"device_name","value":"''' + devicename + '''"}]}'''
+                        base.append(json.loads(array))
+
+                        if 'temperature' in device.states or 'Temperature' in device.states or device.deviceTypeId=='Temperature' or (hasattr(device, 'subModel') and device.subModel=='Temperature'):
+                            x = x + 4
+                            devicename = str(device.name)
+                            array = '''{"text":"What is the temperature of the ''' + devicename + '''","entities":[{"entity":"intent","value":"temperature"},{"entity":"device_name","value":"''' + devicename + '''"}]}'''
+                            base.append(json.loads(array))
+                            array = '''{"text":"Tell me the temperature of the ''' + devicename + '''","entities":[{"entity":"intent","value":"temperature"},{"entity":"device_name","value":"''' + devicename + '''"}]}'''
+                            base.append(json.loads(array))
+                            array = '''{"text":"''' + devicename + ''' temperature? ","entities":[{"entity":"intent","value":"temperature"},{"entity":"device_name","value":"''' + devicename + '''"}]}'''
+                            base.append(json.loads(array))
+                            array = '''{"text":"How hot is ''' + devicename + '''","entities":[{"entity":"intent","value":"temperature"},{"entity":"device_name","value":"''' + devicename + '''"}]}'''
+                            base.append(json.loads(array))
+                        if device.pluginId == 'com.GlennNZ.indigoplugin.FindFriendsMini' and device.model == 'FindFriends Device':
+                            x = x + 4
+                            devicename = str(device.name)
+                            address = device.states['address']
+                            array = '''{"text":"Where is ''' + devicename + '''","entities":[{"entity":"intent","value":"location"},{"entity":"device_name","value":"''' + devicename + '''"}]}'''
+                            base.append(json.loads(array))
+                            array = '''{"text":"Locate ''' + devicename + '''","entities":[{"entity":"intent","value":"location"},{"entity":"device_name","value":"''' + devicename + '''"}]}'''
+                            base.append(json.loads(array))
+                            array = '''{"text":"Find the location of ''' + devicename + '''","entities":[{"entity":"intent","value":"location"},{"entity":"device_name","value":"''' + devicename + '''"}]}'''
+                            base.append(json.loads(array))
+                            array = '''{"text":"Find ''' + devicename + ''' whereabouts","entities":[{"entity":"intent","value":"location"},{"entity":"device_name","value":"''' + devicename + '''"}]}'''
+                            base.append(json.loads(array))
+
+                        if 'brightnessLevel' in device.states:
+                            x = x + 6
+                            devicename = str(device.name)
+                            array = '''{"text":"Dim ''' + devicename + ''' to 10%","entities":[{"entity":"intent","value":"dim_set"},{"entity":"device_name","value":"''' + devicename + '''"},{"entity":"wit$number","value":"10"}]}'''
+                            base.append(json.loads(array))
+                            array = '''{"text":"Set ''' + devicename + ''' to 10% dim","entities":[{"entity":"intent","value":"dim_set"},{"entity":"device_name","value":"''' + devicename + '''"},{"entity":"wit$number","value":"10"}]}'''
+                            base.append(json.loads(array))
+                            array = '''{"text":"Dim ''' + devicename + ''' to 60%","entities":[{"entity":"intent","value":"dim_set"},{"entity":"device_name","value":"''' + devicename + '''"},{"entity":"wit$number","value":"60"}]}'''
+                            base.append(json.loads(array))
+                            array = '''{"text":"Set ''' + devicename + ''' to 60% brightness","entities":[{"entity":"intent","value":"dim_set"},{"entity":"device_name","value":"''' + devicename + '''"},{"entity":"wit$number","value":"60"}]}'''
+                            base.append(json.loads(array))
+                            array = '''{"text":"Set ''' + devicename + ''' to 10% brightness","entities":[{"entity":"intent","value":"dim_set"},{"entity":"device_name","value":"''' + devicename + '''"},{"entity":"wit$number","value":"10"}]}'''
+                            base.append(json.loads(array))
 
                 if x > 185:
                     jsonbase = json.dumps(base)
@@ -1844,13 +1894,15 @@ AND datetime(messageT.date/1000000000 + strftime("%s", "2001-01-01") ,"unixepoch
         if deletenewapp.get('success')==True:
             self.logger.info(u'Wit.Ai Indigo-iMessage App Deleted')
 
+
+
     def wit_createapp(self, access_token):
 
         if self.debugextra:
             self.logger.debug(u'Create New Wit.Ai App')
         params = {}
         params['v'] = '20181110'
-        array = '''{"name":"Indigo-iMessage", "lang":"en","private":"false"}'''
+        array = '''{"name":"Indigo-iMessage-5", "lang":"en","private":"false"}'''
         createnewapp = self.witReq(access_token, 'POST','/apps',params, array)
         self.logger.debug(u'Reply Create App:'+unicode(createnewapp))
 
@@ -1860,9 +1912,11 @@ AND datetime(messageT.date/1000000000 + strftime("%s", "2001-01-01") ,"unixepoch
         self.main_access_token = createnewapp.get('access_token')
         self.app_id = createnewapp.get('app_id')
 
-        indigo.activePlugin.pluginPrefs['main_access_token'] = createnewapp.get('access_token')
-        indigo.activePlugin.pluginPrefs['app_id']= self.app_id
-        indigo.server.savePluginPrefs()
+        self.pluginPrefs['main_access_token'] = createnewapp.get('access_token')
+        self.pluginPrefs['app_id']= self.app_id
+        self.savePluginPrefs()
+        self.logger.debug(u'---- Saved PluginPrefs ------')
+        self.logger.debug(unicode(self.pluginPrefs))
 
         self.logger.error(u'New Access Token Equals:'+unicode(self.access_token))
         return createnewapp.get('access_token')
@@ -1882,12 +1936,14 @@ AND datetime(messageT.date/1000000000 + strftime("%s", "2001-01-01") ,"unixepoch
         self.logger.debug(u'Get Apps:'+unicode(getapp))
 
         for i in getapp:
-            if i['name']== 'Indigo-iMessage':
+            if i['name']== 'Indigo-iMessage-5':
                 self.logger.debug(u'Found App:'+i['name'])
                 self.logger.debug(u'Found App ID:'+i['id'])
                 self.app_id = i['id']
-                indigo.activePlugin.pluginPrefs['app_id']=self.app_id
-                indigo.server.savePluginPrefs()
+                self.pluginPrefs['app_id']=self.app_id
+                self.savePluginPrefs()
+                self.logger.debug(u'---- Saved PluginPrefs ------')
+                self.logger.debug(unicode(self.pluginPrefs))
                 return True
         return False
 
