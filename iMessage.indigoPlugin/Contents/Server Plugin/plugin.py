@@ -1424,8 +1424,6 @@ AND datetime(messageT.date/1000000000 + strftime("%s", "2001-01-01") ,"unixepoch
         if self.debugextra:
             self.logger.debug(u'Thread Delete Wit.ai App Started..')
 
-
-
         self.main_access_token = indigo.activePlugin.pluginPrefs.get('main_access_token','')
 
         self.logger.debug(u'self.main_access_token equals:' + unicode(self.main_access_token))
@@ -1567,7 +1565,7 @@ AND datetime(messageT.date/1000000000 + strftime("%s", "2001-01-01") ,"unixepoch
         if checkappexists==False or self.access_token=='':
             # no app exisits
             # create & get new access_token
-            access_token = self.wit_createapp(self.access_token)
+            self.wit_createapp(self.access_token)
             indigo.activePlugin.pluginPrefs['main_access_token'] = self.access_token
             indigo.server.savePluginPrefs()
             self.wit_createentity(self.access_token, 'device_name')
@@ -1852,7 +1850,7 @@ AND datetime(messageT.date/1000000000 + strftime("%s", "2001-01-01") ,"unixepoch
             self.logger.debug(u'Create New Wit.Ai App')
         params = {}
         params['v'] = '20181110'
-        array = '''{"name":"Indigo-iMessage", "lang":"en","private":"true"}'''
+        array = '''{"name":"Indigo-iMessage", "lang":"en","private":"false"}'''
         createnewapp = self.witReq(access_token, 'POST','/apps',params, array)
         self.logger.debug(u'Reply Create App:'+unicode(createnewapp))
 
