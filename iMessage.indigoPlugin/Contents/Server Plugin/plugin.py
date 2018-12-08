@@ -1424,12 +1424,17 @@ AND datetime(messageT.date/1000000000 + strftime("%s", "2001-01-01") ,"unixepoch
         if self.debugextra:
             self.logger.debug(u'Thread Delete Wit.ai App Started..')
 
+
+
         self.main_access_token = indigo.activePlugin.pluginPrefs.get('main_access_token','')
 
+        self.logger.debug(u'self.main_access_token equals:' + unicode(self.main_access_token))
         if self.main_access_token == '':
             self.access_token = indigo.activePlugin.pluginPrefs.get('access_token','')
         else:
             self.access_token = self.main_access_token
+
+        self.logger.debug(u'self.access_token equals:' + unicode(self.access_token))
 
         checkappexists = self.wit_getappid(self.access_token)
         if checkappexists == False:

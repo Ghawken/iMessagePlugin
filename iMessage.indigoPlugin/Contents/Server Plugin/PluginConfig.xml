@@ -15,14 +15,11 @@
   <Field id="space2001" type="label" fontSize="small" fontColor="black">
     <Label>A comma separated list of buddys allowed to communicate with iMsg</Label>
   </Field>
-  <Field id="allowedBuddies" type="textfield" defaultValue="" tooltip="Allowed buddies to communicate with service [comma separated]">
+  <Field id="allowedBuddies" type="textfield" alighwithControl="true" defaultValue="" alignText="left" tooltip="Allowed buddies to communicate with service [comma separated]">
     <Label>Buddy List:</Label>
   </Field>
-    <Field id="spaced2" type="label" fontSize="small" fontColor="black">
-    <Label>
-        If this is enabled Indigo will Highlight in Log the Buddy Handle Msg received from
-        Use this temporality if any issues working out correct Buddy Handle
-    </Label>
+    <Field id="spaced2" type="label" fontSize="small" alighwithControl="true" fontColor="black">
+    <Label>If this is enabled Indigo will Highlight in Log the Buddy Handle Msg received from. Use this if any issues working out correct Buddy Handle</Label>
   </Field>
 
     <Field id="showBuddies" type="checkbox" tooltip="Highlight Buddy Handles.">
@@ -107,11 +104,11 @@
        </Field>
     <Field id="space2221ae" type="label" fontSize="small" fontColor="black" visibleBindingId="usewit_Ai" visibleBindingValue="true">
     <Label>
-        This will send any new information to wit.ai
-        Click this if have updated the devices you wish to control/use and have
-        updated the Note device field with witai|synomyns for devices
-
-    </Label></Field>
+         This will send any new information to wit.ai.  Click this if have updated the devices
+         you wish to control/use and have updated the Note device field with
+         witai|synomyns for devices
+    </Label>
+    </Field>
  <Field id="sepa29" type="separator" visibleBindingId="usewit_Ai" visibleBindingValue="true"/>
     <Field id="space1ba20" type="label" alignText="left" visibleBindingId="usewit_Ai" visibleBindingValue="true">
     <Label>Wit.Ai Delete:</Label>
