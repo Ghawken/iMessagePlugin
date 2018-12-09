@@ -2035,7 +2035,7 @@ AND datetime(messageT.date/1000000000 + strftime("%s", "2001-01-01") ,"unixepoch
             self.logger.debug(u'Create New Wit.Ai App')
         params = {}
         params['v'] = '20181110'
-        array = '''{"name":"Indigo-iMessage-5", "lang":"en","private":"false"}'''
+        array = '''{"name":"Indigo-iMessage", "lang":"en","private":"false"}'''
         createnewapp = self.witReq(access_token, 'POST','/apps',params, array)
         self.logger.debug(u'Reply Create App:'+unicode(createnewapp))
 
@@ -2069,7 +2069,7 @@ AND datetime(messageT.date/1000000000 + strftime("%s", "2001-01-01") ,"unixepoch
         self.logger.debug(u'Get Apps:'+unicode(getapp))
 
         for i in getapp:
-            if i['name']== 'Indigo-iMessage-5':
+            if i['name']== 'Indigo-iMessage':
                 self.logger.debug(u'Found App:'+i['name'])
                 self.logger.debug(u'Found App ID:'+i['id'])
                 self.app_id = i['id']
