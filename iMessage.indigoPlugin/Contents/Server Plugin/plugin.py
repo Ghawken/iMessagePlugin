@@ -1796,6 +1796,11 @@ AND datetime(messageT.date/1000000000 + strftime("%s", "2001-01-01") ,"unixepoch
                         base.append(json.loads(array))
                         array = '''{"text":"'''+ devicename +''' off","entities":[{"entity":"intent","value":"device_action"},{"entity":"wit$on_off","value":"false"},{"entity":"device_name","value":"'''+devicename+'''"}]}'''
                         base.append(json.loads(array))
+                        array = '''{"text":"Open ''' + devicename + '''","entities":[{"entity":"intent","value":"device_action"},{"entity":"wit$on_off","value":"true"},{"entity":"device_name","value":"''' + devicename + '''"}]}'''
+                        base.append(json.loads(array))
+                        array = '''{"text":"Close ''' + devicename + '''","entities":[{"entity":"intent","value":"device_action"},{"entity":"wit$on_off","value":"false"},{"entity":"device_name","value":"''' + devicename + '''"}]}'''
+                        base.append(json.loads(array))
+
                     if 'temperature' in device.states or 'Temperature' in device.states or device.deviceTypeId=='Temperature' or (hasattr(device, 'subModel') and device.subModel=='Temperature'):
                         x=x+4
                         devicename = str(device.name)
