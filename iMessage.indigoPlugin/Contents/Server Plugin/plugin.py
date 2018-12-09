@@ -258,11 +258,12 @@ class Plugin(indigo.PluginBase):
             self.logger.debug(u"User prefs saved.")
             self.logger.debug(u"Debugging on (Level: {0})".format(self.logLevel))
 
-            self.logger.debug(u"{0:=^130}".format(""))
-            self.logger.debug(u'----------- Closed Prefs Config UI ----------------')
-            self.logger.debug(unicode(self.pluginPrefs))
-            self.logger.debug(u"{0:=^130}".format(""))
-            self.logger.debug(unicode(valuesDict))
+            if self.debugexceptions:
+                self.logger.debug(u"{0:=^130}".format(""))
+                self.logger.debug(u'----------- Closed Prefs Config UI ----------------')
+                self.logger.debug(unicode(self.pluginPrefs))
+                self.logger.debug(u"{0:=^130}".format(""))
+                self.logger.debug(unicode(valuesDict))
 
 
         return True
@@ -1057,12 +1058,12 @@ AND datetime(messageT.date/1000000000 + strftime("%s", "2001-01-01") ,"unixepoch
             valuesDict['main_access_token'] = self.main_access_token
             valuesDict['app_id'] = self.app_id
             self.logger.debug(u'Main_Access_Token:' + unicode(self.access_token))
-
-        self.logger.debug(u"{0:=^130}".format(""))
-        self.logger.debug(unicode(self.pluginPrefs))
-        self.logger.debug(u"{0:=^130}".format(""))
-        self.logger.debug(unicode(valuesDict))
-        # self.errorLog(u"Plugin configuration error: ")
+        if self.debugexceptions:
+            self.logger.debug(u"{0:=^130}".format(""))
+            self.logger.debug(unicode(self.pluginPrefs))
+            self.logger.debug(u"{0:=^130}".format(""))
+            self.logger.debug(unicode(valuesDict))
+            # self.errorLog(u"Plugin configuration error: ")
 
         return True, valuesDict
 
@@ -1469,6 +1470,8 @@ AND datetime(messageT.date/1000000000 + strftime("%s", "2001-01-01") ,"unixepoch
             self.pluginPrefs['main_access_token']= ''
             self.pluginPrefs['app_id']= ''
             self.savePluginPrefs()
+            self.logger.debug(u'---- Saved PluginPrefs ------')
+            self.logger.debug(unicode(self.pluginPrefs))
             self.main_access_token = ''
             return
 
@@ -1477,6 +1480,8 @@ AND datetime(messageT.date/1000000000 + strftime("%s", "2001-01-01") ,"unixepoch
             self.pluginPrefs['main_access_token'] = ''
             self.pluginPrefs['app_id']= ''
             self.savePluginPrefs()
+            self.logger.debug(u'---- Saved PluginPrefs ------')
+            self.logger.debug(unicode(self.pluginPrefs))
             self.main_access_token = ''
             self.access_token = ''
             if self.debugexceptions:
@@ -1576,6 +1581,47 @@ AND datetime(messageT.date/1000000000 + strftime("%s", "2001-01-01") ,"unixepoch
         base.append(json.loads(array))
         array = '''{"text":"Please tell me a funny joke?","entities":[{"entity":"intent","value":"joke"}]}'''
         base.append(json.loads(array))
+        array = '''{"text":"Can you give me some advice","entities":[{"entity":"intent","value":"advice"}]}'''
+        base.append(json.loads(array))
+        array = '''{"text":"Do you have any advice for me?","entities":[{"entity":"intent","value":"advice"}]}'''
+        base.append(json.loads(array))
+        array = '''{"text":"Can you help with some advice?","entities":[{"entity":"intent","value":"advice"}]}'''
+        base.append(json.loads(array))
+        array = '''{"text":"What should I do?","entities":[{"entity":"intent","value":"advice"}]}'''
+        base.append(json.loads(array))
+
+        array = '''{"text":"Hello","entities":[{"entity":"intent","value":"greeting"}]}'''
+        base.append(json.loads(array))
+        array = '''{"text":"Hi, how are you?","entities":[{"entity":"intent","value":"greeting"}]}'''
+        base.append(json.loads(array))
+        array = '''{"text":"What is up?","entities":[{"entity":"intent","value":"greeting"}]}'''
+        base.append(json.loads(array))
+
+        array = '''{"text":"Should I value you opinion?","entities":[{"entity":"intent","value":"yes_no_decision"}]}'''
+        base.append(json.loads(array))
+        array = '''{"text":"Shall I or Shall I not?","entities":[{"entity":"intent","value":"yes_no_decision"}]}'''
+        base.append(json.loads(array))
+        array = '''{"text":"Should I do it?","entities":[{"entity":"intent","value":"yes_no_decision"}]}'''
+        base.append(json.loads(array))
+        array = '''{"text":"Should I really do this?","entities":[{"entity":"intent","value":"yes_no_decision"}]}'''
+        base.append(json.loads(array))
+        array = '''{"text":"What do you suggest? Yes or No?","entities":[{"entity":"intent","value":"yes_no_decision"}]}'''
+        base.append(json.loads(array))
+
+        array = '''{"text":"Piss off you idiot","entities":[{"entity":"intent","value":"insult"},{"entity":"wit$sentiment","value":"negative"}]}'''
+        base.append(json.loads(array))
+        array = '''{"text":"Fuck off","entities":[{"entity":"intent","value":"insult"},{"entity":"wit$sentiment","value":"negative"}]}'''
+        base.append(json.loads(array))
+        array = '''{"text":"Go away","entities":[{"entity":"intent","value":"insult"},{"entity":"wit$sentiment","value":"negative"}]}'''
+        base.append(json.loads(array))
+        array = '''{"text":"Fuck you with bells on","entities":[{"entity":"intent","value":"insult"},{"entity":"wit$sentiment","value":"negative"}]}'''
+        base.append(json.loads(array))
+        array = '''{"text":"You are useless!","entities":[{"entity":"intent","value":"insult"}, {"entity":"wit$sentiment","value":"negative"}]}'''
+        base.append(json.loads(array))
+        array = '''{"text":"You are tosser!","entities":[{"entity":"intent","value":"insult"}, {"entity":"wit$sentiment","value":"negative"}]}'''
+        base.append(json.loads(array))
+
+
         jsonbase = json.dumps(base)
         replyend = self.witReq(self.access_token, 'POST', '/samples', '', jsonbase)
         self.logger.debug(unicode(jsonbase))
