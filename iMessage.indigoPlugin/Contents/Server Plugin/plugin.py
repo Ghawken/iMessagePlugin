@@ -1590,12 +1590,29 @@ AND datetime(messageT.date/1000000000 + strftime("%s", "2001-01-01") ,"unixepoch
         array = '''{"text":"What should I do?","entities":[{"entity":"intent","value":"advice"}]}'''
         base.append(json.loads(array))
 
+        jsonbase = json.dumps(base)
+        replyend = self.witReq(self.access_token, 'POST', '/samples', '', jsonbase)
+        self.logger.debug(unicode(jsonbase))
+        self.logger.debug(unicode(replyend))
+        x = 0
+        del base[:]
+        t.sleep(10)
+
+
         array = '''{"text":"Hello","entities":[{"entity":"intent","value":"greeting"}]}'''
         base.append(json.loads(array))
         array = '''{"text":"Hi, how are you?","entities":[{"entity":"intent","value":"greeting"}]}'''
         base.append(json.loads(array))
         array = '''{"text":"What is up?","entities":[{"entity":"intent","value":"greeting"}]}'''
         base.append(json.loads(array))
+
+        jsonbase = json.dumps(base)
+        replyend = self.witReq(self.access_token, 'POST', '/samples', '', jsonbase)
+        self.logger.debug(unicode(jsonbase))
+        self.logger.debug(unicode(replyend))
+        x = 0
+        del base[:]
+        t.sleep(10)
 
         array = '''{"text":"Should I value you opinion?","entities":[{"entity":"intent","value":"yes_no_decision"}]}'''
         base.append(json.loads(array))
@@ -1607,6 +1624,14 @@ AND datetime(messageT.date/1000000000 + strftime("%s", "2001-01-01") ,"unixepoch
         base.append(json.loads(array))
         array = '''{"text":"What do you suggest? Yes or No?","entities":[{"entity":"intent","value":"yes_no_decision"}]}'''
         base.append(json.loads(array))
+
+        jsonbase = json.dumps(base)
+        replyend = self.witReq(self.access_token, 'POST', '/samples', '', jsonbase)
+        self.logger.debug(unicode(jsonbase))
+        self.logger.debug(unicode(replyend))
+        x = 0
+        del base[:]
+        t.sleep(10)
 
         array = '''{"text":"Piss off you idiot","entities":[{"entity":"intent","value":"insult"},{"entity":"wit$sentiment","value":"negative"}]}'''
         base.append(json.loads(array))
@@ -1628,6 +1653,23 @@ AND datetime(messageT.date/1000000000 + strftime("%s", "2001-01-01") ,"unixepoch
         self.logger.debug(unicode(replyend))
         x = 0
         del base[:]
+
+        ## send seperately
+        array = '''{"text":"Should I value you opinion?","entities":[{"entity":"intent","value":"yes_no_decision"}]}'''
+        base.append(json.loads(array))
+        array = '''{"text":"Shall I or Shall I not?","entities":[{"entity":"intent","value":"yes_no_decision"}]}'''
+        base.append(json.loads(array))
+        array = '''{"text":"Should I do it?","entities":[{"entity":"intent","value":"yes_no_decision"}]}'''
+        base.append(json.loads(array))
+        array = '''{"text":"Should I really do this?","entities":[{"entity":"intent","value":"yes_no_decision"}]}'''
+        base.append(json.loads(array))
+        array = '''{"text":"What do you suggest? Yes or No?","entities":[{"entity":"intent","value":"yes_no_decision"}]}'''
+
+        base.append(json.loads(array))
+        jsonbase = json.dumps(base)
+        replyend = self.witReq(self.access_token, 'POST', '/samples', '', jsonbase)
+        self.logger.debug(unicode(jsonbase))
+        self.logger.debug(unicode(replyend))
 
         self.logger.info(u'Imessage Plugin:  wit.Ai Device successfully updated.')
 
@@ -1878,6 +1920,14 @@ AND datetime(messageT.date/1000000000 + strftime("%s", "2001-01-01") ,"unixepoch
         array = '''{"text":"Please tell me a funny joke?","entities":[{"entity":"intent","value":"joke"}]}'''
         base.append(json.loads(array))
 
+        jsonbase = json.dumps(base)
+        replyend = self.witReq(self.access_token, 'POST', '/samples', '', jsonbase)
+        self.logger.debug(unicode(jsonbase))
+        self.logger.debug(unicode(replyend))
+        x = 0
+        del base[:]
+        self.sleep(15)
+
         array = '''{"text":"Can you give me some advice","entities":[{"entity":"intent","value":"advice"}]}'''
         base.append(json.loads(array))
         array = '''{"text":"Do you have any advice for me?","entities":[{"entity":"intent","value":"advice"}]}'''
@@ -1887,12 +1937,28 @@ AND datetime(messageT.date/1000000000 + strftime("%s", "2001-01-01") ,"unixepoch
         array = '''{"text":"What should I do?","entities":[{"entity":"intent","value":"advice"}]}'''
         base.append(json.loads(array))
 
+        jsonbase = json.dumps(base)
+        replyend = self.witReq(self.access_token, 'POST', '/samples', '', jsonbase)
+        self.logger.debug(unicode(jsonbase))
+        self.logger.debug(unicode(replyend))
+        x = 0
+        del base[:]
+        self.sleep(15)
+
         array = '''{"text":"Hello","entities":[{"entity":"intent","value":"greeting"}]}'''
         base.append(json.loads(array))
         array = '''{"text":"Hi, how are you?","entities":[{"entity":"intent","value":"greeting"}]}'''
         base.append(json.loads(array))
         array = '''{"text":"What is up?","entities":[{"entity":"intent","value":"greeting"}]}'''
         base.append(json.loads(array))
+
+        jsonbase = json.dumps(base)
+        replyend = self.witReq(self.access_token, 'POST', '/samples', '', jsonbase)
+        self.logger.debug(unicode(jsonbase))
+        self.logger.debug(unicode(replyend))
+        x = 0
+        del base[:]
+        self.sleep(15)
 
         array = '''{"text":"Should I value you opinion?","entities":[{"entity":"intent","value":"yes_no_decision"}]}'''
         base.append(json.loads(array))
@@ -1904,6 +1970,14 @@ AND datetime(messageT.date/1000000000 + strftime("%s", "2001-01-01") ,"unixepoch
         base.append(json.loads(array))
         array = '''{"text":"What do you suggest? Yes or No?","entities":[{"entity":"intent","value":"yes_no_decision"}]}'''
         base.append(json.loads(array))
+
+        jsonbase = json.dumps(base)
+        replyend = self.witReq(self.access_token, 'POST', '/samples', '', jsonbase)
+        self.logger.debug(unicode(jsonbase))
+        self.logger.debug(unicode(replyend))
+        x = 0
+        del base[:]
+        self.sleep(15)
 
         array = '''{"text":"Piss off you idiot","entities":[{"entity":"intent","value":"insult"},{"entity":"wit$sentiment","value":"negative"}]}'''
         base.append(json.loads(array))
@@ -1924,7 +1998,6 @@ AND datetime(messageT.date/1000000000 + strftime("%s", "2001-01-01") ,"unixepoch
         self.logger.debug(unicode(replyend))
         x = 0
         del base[:]
-        self.sleep(71)
 
         self.logger.error(u'Indigo iMessage wit.ai Application Created Successfully.')
 
