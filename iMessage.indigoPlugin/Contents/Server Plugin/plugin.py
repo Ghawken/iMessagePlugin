@@ -229,7 +229,6 @@ class Plugin(indigo.PluginBase):
     def closedPrefsConfigUi(self, valuesDict, userCancelled):
         if self.debugextra:
             self.debugLog(u"closedPrefsConfigUi() method called.")
-
         if userCancelled:
             self.debugLog(u"User prefs dialog cancelled.")
 
@@ -1053,11 +1052,15 @@ AND datetime(messageT.date/1000000000 + strftime("%s", "2001-01-01") ,"unixepoch
         if self.main_access_token == '':
             # self.access_token = valuesDict.get('access_token', '')
             self.logger.debug(u'Access_Token:' + unicode(self.access_token))
+            # if self.main_access_token nil delete valuesDict otherwise will be resaved
+            valuesDict['main_access_token'] = ''
+            valuesDict['app_id'] = ''
         else:
             self.access_token = self.main_access_token
             valuesDict['main_access_token'] = self.main_access_token
             valuesDict['app_id'] = self.app_id
             self.logger.debug(u'Main_Access_Token:' + unicode(self.access_token))
+
         if self.debugexceptions:
             self.logger.debug(u"{0:=^130}".format(""))
             self.logger.debug(unicode(self.pluginPrefs))
@@ -1439,9 +1442,15 @@ AND datetime(messageT.date/1000000000 + strftime("%s", "2001-01-01") ,"unixepoch
     def wit_ThreadCreate(self, valuesDict):
         if self.debugextra:
             self.logger.debug(u'Thread Create Wit.ai App Started..')
-        self.myThread = threading.Thread(target=self.witaitesting, args=())
+        self.myThread = threading.Thread(target=self.witai_CreateApp, args=())
         #self.myThread.daemon = True
         self.myThread.start()
+
+    def wit_ThreadUpdateApp(self,valuesDict):
+        if self.debugextra:
+            self.logger.debug(u'Thread Update Wit.ai App Started..')
+        self.myThreadUpdate = threading.Thread(target=self.wit_updateDevices, args=())
+        self.myThreadUpdate.start()
 
     def wit_Delete(self, valuesDict):
 
@@ -1488,7 +1497,7 @@ AND datetime(messageT.date/1000000000 + strftime("%s", "2001-01-01") ,"unixepoch
                 self.logger.exception(u'Exception in Delete App')
             return
 
-    def wit_updateDevices(self, valuesDict):
+    def wit_updateDevices(self):
 
         if self.debugextra:
             self.logger.debug(u'Wit.Ai Update called')
@@ -1674,7 +1683,7 @@ AND datetime(messageT.date/1000000000 + strftime("%s", "2001-01-01") ,"unixepoch
         self.logger.info(u'Imessage Plugin:  wit.Ai Device successfully updated.')
 
 
-    def witaitesting(self):
+    def witai_CreateApp(self):
 
         if self.debugextra:
             self.logger.debug(u'Wit.Ai Create App called')
@@ -2017,7 +2026,7 @@ AND datetime(messageT.date/1000000000 + strftime("%s", "2001-01-01") ,"unixepoch
         #reply_dict = json.loads(createnewapp)
         if deletenewapp.get('success')==True:
             self.logger.info(u'Wit.Ai Indigo-iMessage App Deleted')
-
+            self.main_access_token = ''
 
 
     def wit_createapp(self, access_token):

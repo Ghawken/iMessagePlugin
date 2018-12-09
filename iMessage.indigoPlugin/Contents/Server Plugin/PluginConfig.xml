@@ -100,7 +100,7 @@
 				   tooltip="Click on this button to Update all Wit.Ai Devices/Synonyms" visibleBindingId="usewit_Ai" visibleBindingValue="true">
 				<Label>Update Wit.AI App</Label>
 				<Title>Update Wit.AI App</Title>
-				<CallbackMethod>wit_updateDevices</CallbackMethod>
+				<CallbackMethod>wit_ThreadUpdateApp</CallbackMethod>
        </Field>
     <Field id="space2221ae" type="label" fontSize="small" fontColor="black" visibleBindingId="usewit_Ai" visibleBindingValue="true">
     <Label>
@@ -114,14 +114,14 @@
     <Label>Wit.Ai Delete:</Label>
   </Field>
 
-    <Field id="main_access_token" type="textfield" fontColor="black" tooltip="Witopia Access Token NEW" readonly="true" visibleBindingId="usewit_Ai" visibleBindingValue="true" >
+    <Field id="main_access_token" type="textfield" fontColor="black" tooltip="Witopia Access Token NEW" dynamicReload="true" readonly="true" visibleBindingId="usewit_Ai" visibleBindingValue="true" >
     <Label>New App Access Token:</Label>
   </Field>
 
 
 
 
-   <Field id="app_id" type="textfield" tooltip="Witopia App Id Token NEW" fontColor="black" readonly="true" visibleBindingId="usewit_Ai" visibleBindingValue="true" >
+   <Field id="app_id" type="textfield" tooltip="Witopia App Id Token NEW" fontColor="black" readonly="true" dynamicReload="true" visibleBindingId="usewit_Ai" visibleBindingValue="true" >
     <Label>App_ID:</Label>
   </Field>
     <Field id="deletewitApp"
