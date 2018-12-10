@@ -141,80 +141,21 @@ class Plugin(indigo.PluginBase):
 
 
         if self.app_id !='' and self.use_witAi and self.main_access_token !='':
-            self.logger.info(u'Updating Device naming and further Sample data for Wit.Ai Online App now')
+            self.logger.info(u'Running update wit.ai Device naming and further Sample data for Wit.Ai Online App now')
 
             try:
-                array2 = '''{"doc":"Indigo device_name","lookups":["free-text","keywords"],"values":['''
-                # array2 = '''{"values":['''
-                x = 0
-                synomynarray = []
 
-                ## Push all new names and synomyns
-                for device in indigo.devices.itervalues():
-                    if self.wit_alldevices:
-                        description = str(device.description)
-                        if description != '' and description.startswith('witai'):
-                            # okay - just grab the first line
-                            # self.logger.debug(u'Description: String result found:'+unicode(description))
-                            description = description.split('\n', 1)[0]
-                            # firstline, now remove witai
-                            # self.logger.debug(u'Description: First Line only:'+unicode(description))
-                            description = description[6:]
-                            # self.logger.debug(u'Description: New Description equals:'+unicode(description))
-                            # now break up by seperating on | characters
-                            synomynarray = description.split('|')
-                            # self.logger.debug(u'Description: Array now equals:'+unicode(synomynarray))
-
-                        devicename = str(device.name)
-                        array2 = array2 + '''{"value":"''' + devicename + '''","expressions":["''' + devicename + '''",'''
-                        if synomynarray:  # not empty
-                            for synomyn in synomynarray:
-                                array2 = array2 + '''"''' + synomyn + '''",'''
-
-                            del synomynarray[:]
-                        array2 = array2[:-1]
-                        array2 = array2 + '''],"metadata" :  "''' + str(device.id) + '''"},'''
-
-                    else:
-                        description = str(device.description)
-                        if description != '' and description.startswith('witai'):
-                            # okay - just grab the first line
-                            # self.logger.debug(u'Description: String result found:' + unicode(description))
-                            description = description.split('\n', 1)[0]
-                            # firstline, now remove witai
-                            # self.logger.debug(u'Description: First Line only:' + unicode(description))
-                            description = description[6:]
-                            # self.logger.debug(u'Description: New Description equals:' + unicode(description))
-                            # now break up by seperating on | characters
-                            synomynarray = description.split('|')
-                            # .logger.debug(u'Description: Array now equals:' + unicode(synomynarray))
-
-                            devicename = str(device.name)
-                            array2 = array2 + '''{"value":"''' + devicename + '''","expressions":["''' + devicename + '''",'''
-                            if synomynarray:  # not empty
-                                for synomyn in synomynarray:
-                                    array2 = array2 + '''"''' + synomyn + '''",'''
-
-                                del synomynarray[:]
-                            array2 = array2[:-1]
-                            array2 = array2 + '''],"metadata" :  "''' + str(device.id) + '''"},'''
-
-                array2 = array2[:-1] + ']}'
-                # array2 = json.dumps(array2)
-                self.logger.debug(unicode(array2))
-
-                params = {}
-                params['v'] = '20181110'
-                entityput = self.witReq(self.main_access_token, 'PUT', '/entities/device_name', params, array2)
-                self.logger.debug(unicode(entityput))
+                valuesDict = {}
+                self.wit_ThreadUpdateApp(valuesDict)
 
             except:
                 self.logger.info(u'Error updating new devices...')
                 if self.debugexceptions:
                     self.logger.exception(u'and caught exception:')
+                return
 
             self.pluginPrefs['loadedPluginVersion'] = newVersion
-            self.logger.info(u'Completed plugin updating/installation for ' + newVersion)
+            self.logger.info(u'Completing plugin updating/installation for ' + newVersion)
             return
 
 
@@ -866,6 +807,28 @@ AND datetime(messageT.date/1000000000 + strftime("%s", "2001-01-01") ,"unixepoch
                 else:
                     self.logger.debug(u'witAI Action: on_off not recognised.')
                     self.as_sendmessage(buddy, 'Command not recognised:' + devicetoaction)
+            if intent =='device_status' and float(intent_confidence)>0.85:
+                self.logger.debug(u'Intent:' + unicode(intent))
+                if device_name is None:
+                    self.logger.debug(u'Unsure as to which Device to act on.')
+                    self.as_sendmessage(buddy, 'Sorry not sure which Device to act on.  Nothing done.')
+                    return
+                else:
+                    self.logger.debug(u'Acting on Device:' + unicode(device_name))
+                    devicetoaction = device_name
+                    # confidence = device_name['confidence']
+                # get device status
+                try:
+                    device = indigo.devices[device_name]
+                    statusofDevice = 'unknown'
+                    if hasattr(device, "displayStateValRaw") and device.displayStateValRaw in ['0', False, True]:
+                        if hasattr(device, 'displayStateValUi'):
+                            statusofDevice = device.displayStateValUi
+                    self.as_sendmessage(buddy, 'Current Status of ' + devicetoaction +' is '+statusofDevice)
+                except:
+                    self.logger.exception(u'Caught Exception in device Status intent')
+                return
+
             if intent =='insult' and float(intent_confidence)>0.50:
                 self.logger.debug(u'Plugin has just been insulted...')
                 insult = self.return_insult()
@@ -1501,64 +1464,41 @@ AND datetime(messageT.date/1000000000 + strftime("%s", "2001-01-01") ,"unixepoch
 
         if self.debugextra:
             self.logger.debug(u'Wit.Ai Update called')
-        if self.main_access_token == '':
-            self.access_token = self.pluginPrefs.get('access_token','')
-        else:
-            self.access_token = self.main_access_token
+        try:
+            if self.main_access_token == '':
+                self.access_token = self.pluginPrefs.get('access_token','')
+            else:
+                self.access_token = self.main_access_token
 
-        # check apps
-        checkappexists = self.wit_getappid(self.access_token)
-        if checkappexists==False or self.access_token=='':
-            self.logger.info(u'wit.Ai Application does not seem to exist.  Press Create first before updating')
-            return
+            # check apps
+            checkappexists = self.wit_getappid(self.access_token)
+            if checkappexists==False or self.access_token=='':
+                self.logger.info(u'wit.Ai Application does not seem to exist.  Press Create first before updating')
+                return
 
-        array2 = '''{"doc":"Indigo device_name","lookups":["free-text","keywords"],"values":['''
-        # array2 = '''{"values":['''
-        x = 0
-        synomynarray = []
+            array2 = '''{"doc":"Indigo device_name","lookups":["free-text","keywords"],"values":['''
+            # array2 = '''{"values":['''
+            x = 0
+            synomynarray = []
 
 
-## Push all new names and synomyns
-        for device in indigo.devices.itervalues():
-            if device.enabled:
+    ## Push all new names and synomyns
+            for device in indigo.devices.itervalues():
+                if device.enabled:
 
-                if self.wit_alldevices:
-                    description = str(device.description)
-                    if description != '' and description.startswith('witai'):
-                        # okay - just grab the first line
-                        # self.logger.debug(u'Description: String result found:'+unicode(description))
-                        description = description.split('\n', 1)[0]
-                        # firstline, now remove witai
-                        # self.logger.debug(u'Description: First Line only:'+unicode(description))
-                        description = description[6:]
-                        # self.logger.debug(u'Description: New Description equals:'+unicode(description))
-                        # now break up by seperating on | characters
-                        synomynarray = description.split('|')
-                        # self.logger.debug(u'Description: Array now equals:'+unicode(synomynarray))
-
-                    devicename = str(device.name)
-                    array2 = array2 + '''{"value":"''' + devicename + '''","expressions":["''' + devicename + '''",'''
-                    if synomynarray:  # not empty
-                        for synomyn in synomynarray:
-                            array2 = array2 + '''"''' + synomyn + '''",'''
-
-                        del synomynarray[:]
-                    array2 = array2[:-1]
-                    array2 = array2 + '''],"metadata" :  "''' + str(device.id) + '''"},'''
-
-                else:
-                    description = str(device.description)
-                    if description != '' and description.startswith('witai'):
-                        # okay - just grab the first line
-                        # self.logger.debug(u'Description: String result found:' + unicode(description))
-                        description = description.split('\n', 1)[0]
-                        # firstline, now remove witai
-                        # self.logger.debug(u'Description: First Line only:' + unicode(description))
-                        description = description[6:]
-                        # self.logger.debug(u'Description: New Description equals:' + unicode(description))
-                        # now break up by seperating on | characters
-                        synomynarray = description.split('|')
-                        # .logger.debug(u'Description: Array now equals:' + unicode(synomynarray))
+                    if self.wit_alldevices:
+                        description = str(device.description)
+                        if description != '' and description.startswith('witai'):
+                            # okay - just grab the first line
+                            # self.logger.debug(u'Description: String result found:'+unicode(description))
+                            description = description.split('\n', 1)[0]
+                            # firstline, now remove witai
+                            # self.logger.debug(u'Description: First Line only:'+unicode(description))
+                            description = description[6:]
+                            # self.logger.debug(u'Description: New Description equals:'+unicode(description))
+                            # now break up by seperating on | characters
+                            synomynarray = description.split('|')
+                            # self.logger.debug(u'Description: Array now equals:'+unicode(synomynarray))
 
                         devicename = str(device.name)
                         array2 = array2 + '''{"value":"''' + devicename + '''","expressions":["''' + devicename + '''",'''
@@ -1570,118 +1510,207 @@ AND datetime(messageT.date/1000000000 + strftime("%s", "2001-01-01") ,"unixepoch
                         array2 = array2[:-1]
                         array2 = array2 + '''],"metadata" :  "''' + str(device.id) + '''"},'''
 
-        array2 = array2[:-1] + ']}'
-        # array2 = json.dumps(array2)
-        self.logger.debug(unicode(array2))
+                    else:
+                        description = str(device.description)
+                        if description != '' and description.startswith('witai'):
+                            # okay - just grab the first line
+                            # self.logger.debug(u'Description: String result found:' + unicode(description))
+                            description = description.split('\n', 1)[0]
+                            # firstline, now remove witai
+                            # self.logger.debug(u'Description: First Line only:' + unicode(description))
+                            description = description[6:]
+                            # self.logger.debug(u'Description: New Description equals:' + unicode(description))
+                            # now break up by seperating on | characters
+                            synomynarray = description.split('|')
+                            # .logger.debug(u'Description: Array now equals:' + unicode(synomynarray))
 
-        params = {}
-        params['v'] = '20181110'
-        entityput = self.witReq(self.access_token, 'PUT', '/entities/device_name', params, array2)
-        self.logger.debug(unicode(entityput))
-        t.sleep(10)
+                            devicename = str(device.name)
+                            array2 = array2 + '''{"value":"''' + devicename + '''","expressions":["''' + devicename + '''",'''
+                            if synomynarray:  # not empty
+                                for synomyn in synomynarray:
+                                    array2 = array2 + '''"''' + synomyn + '''",'''
 
-        ## send any new samples between versions
-        ## Probably pay to run this on first startup....
+                                del synomynarray[:]
+                            array2 = array2[:-1]
+                            array2 = array2 + '''],"metadata" :  "''' + str(device.id) + '''"},'''
 
-        base =[]
-        array = '''{"text":"Tell me a joke","entities":[{"entity":"intent","value":"joke"}]}'''
-        base.append(json.loads(array))
-        array = '''{"text":"Do you know any good jokes?","entities":[{"entity":"intent","value":"joke"}]}'''
-        base.append(json.loads(array))
-        array = '''{"text":"Please tell me a funny joke?","entities":[{"entity":"intent","value":"joke"}]}'''
-        base.append(json.loads(array))
-        array = '''{"text":"Can you give me some advice","entities":[{"entity":"intent","value":"advice"}]}'''
-        base.append(json.loads(array))
-        array = '''{"text":"Do you have any advice for me?","entities":[{"entity":"intent","value":"advice"}]}'''
-        base.append(json.loads(array))
-        array = '''{"text":"Can you help with some advice?","entities":[{"entity":"intent","value":"advice"}]}'''
-        base.append(json.loads(array))
-        array = '''{"text":"What should I do?","entities":[{"entity":"intent","value":"advice"}]}'''
-        base.append(json.loads(array))
+            array2 = array2[:-1] + ']}'
+            # array2 = json.dumps(array2)
+            self.logger.debug(unicode(array2))
 
-        jsonbase = json.dumps(base)
-        replyend = self.witReq(self.access_token, 'POST', '/samples', '', jsonbase)
-        self.logger.debug(unicode(jsonbase))
-        self.logger.debug(unicode(replyend))
-        x = 0
-        del base[:]
-        t.sleep(10)
+            params = {}
+            params['v'] = '20181110'
+            entityput = self.witReq(self.access_token, 'PUT', '/entities/device_name', params, array2)
+            self.logger.debug(unicode(entityput))
+            t.sleep(10)
+            x=0
+            base = []
+
+            for device in indigo.devices.itervalues():
+                if device.enabled:
+                    if self.wit_alldevices:
+                        self.logger.debug(u'Okay - sending all device details to help with parsing...')
+                        if hasattr(device, "displayStateValRaw") and device.displayStateValRaw in ['0',False,True]:
+                            x=x+8
+                            devicename = str(device.name)
+                            array = '''{"text":"What is the status of '''+ devicename +'''","entities":[{"entity":"intent","value":"device_status"},{"entity":"device_name","value":"'''+devicename+'''"}]}'''
+                            base.append(json.loads(array))
+                            array = '''{"text":"What is the state of '''+ devicename +'''","entities":[{"entity":"intent","value":"device_status"},{"entity":"device_name","value":"'''+devicename+'''"}]}'''
+                            base.append(json.loads(array))
+                            array = '''{"text":"Is the '''+ devicename +''' off? ","entities":[{"entity":"intent","value":"device_status"},{"entity":"device_name","value":"'''+devicename+'''"}]}'''
+                            base.append(json.loads(array))
+                            array = '''{"text":"Is the '''+ devicename +''' Open? ","entities":[{"entity":"intent","value":"device_status"},{"entity":"device_name","value":"'''+devicename+'''"}]}'''
+                            base.append(json.loads(array))
+                            array = '''{"text":"Is the '''+ devicename +''' Closed? ","entities":[{"entity":"intent","value":"device_status"},{"entity":"device_name","value":"'''+devicename+'''"}]}'''
+                            base.append(json.loads(array))
+                            array = '''{"text":"Is the '''+ devicename +''' On? ","entities":[{"entity":"intent","value":"device_status"},{"entity":"device_name","value":"'''+devicename+'''"}]}'''
+                            base.append(json.loads(array))
+                            array = '''{"text":"Can you tell me whether ''' + devicename + ''' is on? ","entities":[{"entity":"intent","value":"device_status},{"entity":"device_name","value":"''' + devicename + '''"}]}'''
+                            base.append(json.loads(array))
+                            array = '''{"text":"Can you tell me whether ''' + devicename + ''' is off? ","entities":[{"entity":"intent","value":"device_status},{"entity":"device_name","value":"''' + devicename + '''"}]}'''
+                            base.append(json.loads(array))
+                    else:
+                        description = str(device.description)
+                        if description != '' and description.startswith('witai'):
+                            x=x+8
+                            devicename = str(device.name)
+                            array = '''{"text":"What is the status of '''+ devicename +'''","entities":[{"entity":"intent","value":"device_status"},{"entity":"device_name","value":"'''+devicename+'''"}]}'''
+                            base.append(json.loads(array))
+                            array = '''{"text":"What is the state of '''+ devicename +'''","entities":[{"entity":"intent","value":"device_status"},{"entity":"device_name","value":"'''+devicename+'''"}]}'''
+                            base.append(json.loads(array))
+                            array = '''{"text":"Is the '''+ devicename +''' off? ","entities":[{"entity":"intent","value":"device_status"},{"entity":"device_name","value":"'''+devicename+'''"}]}'''
+                            base.append(json.loads(array))
+                            array = '''{"text":"Is the '''+ devicename +''' Open? ","entities":[{"entity":"intent","value":"device_status"},{"entity":"device_name","value":"'''+devicename+'''"}]}'''
+                            base.append(json.loads(array))
+                            array = '''{"text":"Is the '''+ devicename +''' Closed? ","entities":[{"entity":"intent","value":"device_status"},{"entity":"device_name","value":"'''+devicename+'''"}]}'''
+                            base.append(json.loads(array))
+                            array = '''{"text":"Is the '''+ devicename +''' On? ","entities":[{"entity":"intent","value":"device_status"},{"entity":"device_name","value":"'''+devicename+'''"}]}'''
+                            base.append(json.loads(array))
+                            array = '''{"text":"Can you tell me whether ''' + devicename + ''' is on? ","entities":[{"entity":"intent","value":"device_status"},{"entity":"device_name","value":"''' + devicename + '''"}]}'''
+                            base.append(json.loads(array))
+                            array = '''{"text":"Can you tell me whether ''' + devicename + ''' is off? ","entities":[{"entity":"intent","value":"device_status"},{"entity":"device_name","value":"''' + devicename + '''"}]}'''
+                            base.append(json.loads(array))
+
+                if x > 170:
+                    jsonbase = json.dumps(base)
+                    replyend = self.witReq(self.access_token, 'POST', '/samples', '', jsonbase)
+                    self.logger.debug(unicode(jsonbase))
+                    self.logger.debug(unicode(replyend))
+                    x = 0
+                    del base[:]
+                    self.sleep(71)
+
+            jsonbase = json.dumps(base)
+            replyend = self.witReq(self.access_token, 'POST', '/samples', '', jsonbase)
+            self.logger.debug(unicode(jsonbase))
+            self.logger.debug(unicode(replyend))
+            x = 0
+            del base[:]
+            self.sleep(71)
 
 
-        array = '''{"text":"Hello","entities":[{"entity":"intent","value":"greeting"}]}'''
-        base.append(json.loads(array))
-        array = '''{"text":"Hi, how are you?","entities":[{"entity":"intent","value":"greeting"}]}'''
-        base.append(json.loads(array))
-        array = '''{"text":"What is up?","entities":[{"entity":"intent","value":"greeting"}]}'''
-        base.append(json.loads(array))
-
-        jsonbase = json.dumps(base)
-        replyend = self.witReq(self.access_token, 'POST', '/samples', '', jsonbase)
-        self.logger.debug(unicode(jsonbase))
-        self.logger.debug(unicode(replyend))
-        x = 0
-        del base[:]
-        t.sleep(10)
-
-        array = '''{"text":"Should I value you opinion?","entities":[{"entity":"intent","value":"yes_no_decision"}]}'''
-        base.append(json.loads(array))
-        array = '''{"text":"Shall I or Shall I not?","entities":[{"entity":"intent","value":"yes_no_decision"}]}'''
-        base.append(json.loads(array))
-        array = '''{"text":"Should I do it?","entities":[{"entity":"intent","value":"yes_no_decision"}]}'''
-        base.append(json.loads(array))
-        array = '''{"text":"Should I really do this?","entities":[{"entity":"intent","value":"yes_no_decision"}]}'''
-        base.append(json.loads(array))
-        array = '''{"text":"What do you suggest? Yes or No?","entities":[{"entity":"intent","value":"yes_no_decision"}]}'''
-        base.append(json.loads(array))
-
-        jsonbase = json.dumps(base)
-        replyend = self.witReq(self.access_token, 'POST', '/samples', '', jsonbase)
-        self.logger.debug(unicode(jsonbase))
-        self.logger.debug(unicode(replyend))
-        x = 0
-        del base[:]
-        t.sleep(10)
-
-        array = '''{"text":"Piss off you idiot","entities":[{"entity":"intent","value":"insult"},{"entity":"wit$sentiment","value":"negative"}]}'''
-        base.append(json.loads(array))
-        array = '''{"text":"Fuck off","entities":[{"entity":"intent","value":"insult"},{"entity":"wit$sentiment","value":"negative"}]}'''
-        base.append(json.loads(array))
-        array = '''{"text":"Go away","entities":[{"entity":"intent","value":"insult"},{"entity":"wit$sentiment","value":"negative"}]}'''
-        base.append(json.loads(array))
-        array = '''{"text":"Fuck you with bells on","entities":[{"entity":"intent","value":"insult"},{"entity":"wit$sentiment","value":"negative"}]}'''
-        base.append(json.loads(array))
-        array = '''{"text":"You are useless!","entities":[{"entity":"intent","value":"insult"}, {"entity":"wit$sentiment","value":"negative"}]}'''
-        base.append(json.loads(array))
-        array = '''{"text":"You are tosser!","entities":[{"entity":"intent","value":"insult"}, {"entity":"wit$sentiment","value":"negative"}]}'''
-        base.append(json.loads(array))
+            ## send any new samples between versions
+            ## Probably pay to run this on first startup....
 
 
-        jsonbase = json.dumps(base)
-        replyend = self.witReq(self.access_token, 'POST', '/samples', '', jsonbase)
-        self.logger.debug(unicode(jsonbase))
-        self.logger.debug(unicode(replyend))
-        x = 0
-        del base[:]
+            array = '''{"text":"Tell me a joke","entities":[{"entity":"intent","value":"joke"}]}'''
+            base.append(json.loads(array))
+            array = '''{"text":"Do you know any good jokes?","entities":[{"entity":"intent","value":"joke"}]}'''
+            base.append(json.loads(array))
+            array = '''{"text":"Please tell me a funny joke?","entities":[{"entity":"intent","value":"joke"}]}'''
+            base.append(json.loads(array))
+            array = '''{"text":"Can you give me some advice","entities":[{"entity":"intent","value":"advice"}]}'''
+            base.append(json.loads(array))
+            array = '''{"text":"Do you have any advice for me?","entities":[{"entity":"intent","value":"advice"}]}'''
+            base.append(json.loads(array))
+            array = '''{"text":"Can you help with some advice?","entities":[{"entity":"intent","value":"advice"}]}'''
+            base.append(json.loads(array))
+            array = '''{"text":"What should I do?","entities":[{"entity":"intent","value":"advice"}]}'''
+            base.append(json.loads(array))
 
-        ## send seperately
-        array = '''{"text":"Should I value you opinion?","entities":[{"entity":"intent","value":"yes_no_decision"}]}'''
-        base.append(json.loads(array))
-        array = '''{"text":"Shall I or Shall I not?","entities":[{"entity":"intent","value":"yes_no_decision"}]}'''
-        base.append(json.loads(array))
-        array = '''{"text":"Should I do it?","entities":[{"entity":"intent","value":"yes_no_decision"}]}'''
-        base.append(json.loads(array))
-        array = '''{"text":"Should I really do this?","entities":[{"entity":"intent","value":"yes_no_decision"}]}'''
-        base.append(json.loads(array))
-        array = '''{"text":"What do you suggest? Yes or No?","entities":[{"entity":"intent","value":"yes_no_decision"}]}'''
+            jsonbase = json.dumps(base)
+            replyend = self.witReq(self.access_token, 'POST', '/samples', '', jsonbase)
+            self.logger.debug(unicode(jsonbase))
+            self.logger.debug(unicode(replyend))
+            x = 0
+            del base[:]
+            t.sleep(10)
 
-        base.append(json.loads(array))
-        jsonbase = json.dumps(base)
-        replyend = self.witReq(self.access_token, 'POST', '/samples', '', jsonbase)
-        self.logger.debug(unicode(jsonbase))
-        self.logger.debug(unicode(replyend))
 
-        self.logger.info(u'Imessage Plugin:  wit.Ai Device successfully updated.')
+            array = '''{"text":"Hello","entities":[{"entity":"intent","value":"greeting"}]}'''
+            base.append(json.loads(array))
+            array = '''{"text":"Hi, how are you?","entities":[{"entity":"intent","value":"greeting"}]}'''
+            base.append(json.loads(array))
+            array = '''{"text":"What is up?","entities":[{"entity":"intent","value":"greeting"}]}'''
+            base.append(json.loads(array))
 
+            jsonbase = json.dumps(base)
+            replyend = self.witReq(self.access_token, 'POST', '/samples', '', jsonbase)
+            self.logger.debug(unicode(jsonbase))
+            self.logger.debug(unicode(replyend))
+            x = 0
+            del base[:]
+            t.sleep(10)
+
+            array = '''{"text":"Should I value you opinion?","entities":[{"entity":"intent","value":"yes_no_decision"}]}'''
+            base.append(json.loads(array))
+            array = '''{"text":"Shall I or Shall I not?","entities":[{"entity":"intent","value":"yes_no_decision"}]}'''
+            base.append(json.loads(array))
+            array = '''{"text":"Should I do it?","entities":[{"entity":"intent","value":"yes_no_decision"}]}'''
+            base.append(json.loads(array))
+            array = '''{"text":"Should I really do this?","entities":[{"entity":"intent","value":"yes_no_decision"}]}'''
+            base.append(json.loads(array))
+            array = '''{"text":"What do you suggest? Yes or No?","entities":[{"entity":"intent","value":"yes_no_decision"}]}'''
+            base.append(json.loads(array))
+
+            jsonbase = json.dumps(base)
+            replyend = self.witReq(self.access_token, 'POST', '/samples', '', jsonbase)
+            self.logger.debug(unicode(jsonbase))
+            self.logger.debug(unicode(replyend))
+            x = 0
+            del base[:]
+            t.sleep(10)
+
+            array = '''{"text":"Piss off you idiot","entities":[{"entity":"intent","value":"insult"},{"entity":"wit$sentiment","value":"negative"}]}'''
+            base.append(json.loads(array))
+            array = '''{"text":"Fuck off","entities":[{"entity":"intent","value":"insult"},{"entity":"wit$sentiment","value":"negative"}]}'''
+            base.append(json.loads(array))
+            array = '''{"text":"Go away","entities":[{"entity":"intent","value":"insult"},{"entity":"wit$sentiment","value":"negative"}]}'''
+            base.append(json.loads(array))
+            array = '''{"text":"Fuck you with bells on","entities":[{"entity":"intent","value":"insult"},{"entity":"wit$sentiment","value":"negative"}]}'''
+            base.append(json.loads(array))
+            array = '''{"text":"You are useless!","entities":[{"entity":"intent","value":"insult"}, {"entity":"wit$sentiment","value":"negative"}]}'''
+            base.append(json.loads(array))
+            array = '''{"text":"You are tosser!","entities":[{"entity":"intent","value":"insult"}, {"entity":"wit$sentiment","value":"negative"}]}'''
+            base.append(json.loads(array))
+
+
+            jsonbase = json.dumps(base)
+            replyend = self.witReq(self.access_token, 'POST', '/samples', '', jsonbase)
+            self.logger.debug(unicode(jsonbase))
+            self.logger.debug(unicode(replyend))
+            x = 0
+            del base[:]
+
+            ## send seperately
+            array = '''{"text":"Should I value you opinion?","entities":[{"entity":"intent","value":"yes_no_decision"}]}'''
+            base.append(json.loads(array))
+            array = '''{"text":"Shall I or Shall I not?","entities":[{"entity":"intent","value":"yes_no_decision"}]}'''
+            base.append(json.loads(array))
+            array = '''{"text":"Should I do it?","entities":[{"entity":"intent","value":"yes_no_decision"}]}'''
+            base.append(json.loads(array))
+            array = '''{"text":"Should I really do this?","entities":[{"entity":"intent","value":"yes_no_decision"}]}'''
+            base.append(json.loads(array))
+            array = '''{"text":"What do you suggest? Yes or No?","entities":[{"entity":"intent","value":"yes_no_decision"}]}'''
+
+            base.append(json.loads(array))
+            jsonbase = json.dumps(base)
+            replyend = self.witReq(self.access_token, 'POST', '/samples', '', jsonbase)
+            self.logger.debug(unicode(jsonbase))
+            self.logger.debug(unicode(replyend))
+            self.logger.info(u'Imessage Plugin:  wit.Ai Device successfully updated.')
+        except:
+            self.logger.exception(u'Update Code Exception Caught:')
 
     def witai_CreateApp(self):
 
