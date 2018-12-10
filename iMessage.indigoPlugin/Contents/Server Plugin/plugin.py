@@ -2149,6 +2149,8 @@ AND datetime(messageT.date/1000000000 + strftime("%s", "2001-01-01") ,"unixepoch
 
         Triggered = False
 
+
+
         imsgcmdreceived = re.sub(r'([^a-zA-Z ]+?)', '', imsgcmdreceived)
         if self.debugtriggers:
             self.logger.debug(u'Removed extra characters from cmd received:'+imsgcmdreceived)
@@ -2157,23 +2159,42 @@ AND datetime(messageT.date/1000000000 + strftime("%s", "2001-01-01") ,"unixepoch
             for triggerId, trigger in sorted(self.triggers.iteritems()):
                 if self.debugtriggers:
                     self.logger.debug("Checking Trigger:  %s (%s), Type: %s,  and event : %s" % (trigger.name, trigger.id, trigger.pluginTypeId,  triggertype))
+                anyStringcheck = trigger.pluginProps.get('anyStringcheck', False)
+                if self.debugtriggers:
+                    self.logger.debug("Trigger : %s, has any text Containing = %s" % (trigger.name, anyStringcheck))
+
                 #self.logger.error(unicode(trigger))
                 if trigger.pluginTypeId == "commandReceived" and triggertype =='commandReceived':
                     if self.debugtriggers:
                         self.logger.debug(u'Trigger PluginProps: CommandCalled:'+unicode(trigger.pluginProps['commandCalled']))
-                    if trigger.pluginProps['commandCalled'] == (str(imsgcmdreceived).lower()):
-                        if self.debugtriggers:
-                            self.logger.debug("===== Executing commandReceived Trigger %s (%d)" % (trigger.name, trigger.id))
-                        indigo.trigger.execute(trigger)
-                        Triggered = True
+                    if anyStringcheck==False:
+                        if trigger.pluginProps['commandCalled'] == (str(imsgcmdreceived).lower()):
+                            if self.debugtriggers:
+                                self.logger.debug("========= Executing commandReceived Trigger %s (%d) ==========" % (trigger.name, trigger.id))
+                            indigo.trigger.execute(trigger)
+                            Triggered = True
+                    else:
+                        if trigger.pluginProps['commandCalled'] in (str(imsgcmdreceived).lower()):
+                            if self.debugtriggers:
+                                self.logger.debug("========== Executing commandReceived Trigger %s (%d) ======= anyText True =====" % (trigger.name, trigger.id))
+                            indigo.trigger.execute(trigger)
+                            Triggered = True
+
                 if trigger.pluginTypeId == "specificBuddycommandReceived" and triggertype == 'commandReceived':
                     if self.debugtriggers:
                         self.logger.debug(u'Trigger PluginProps: Specific CommandCalled:'+unicode(trigger.pluginProps['commandCalled']))
-                    if buddy in trigger.pluginProps['buddyId'] and trigger.pluginProps['commandCalled'] == (str(imsgcmdreceived).lower()):  # checking buddy in list of options
-                        if self.debugtriggers:
-                            self.logger.debug(u'Buddy Found:'+unicode(buddy)+' and Buddy in allowed list for trigger:'+unicode(trigger.pluginProps['buddyId'])+' Specific Command Called:' + unicode(trigger.pluginProps['commandCalled']))
-                        indigo.trigger.execute(trigger)
-                        Triggered = True
+                    if anyStringcheck==False:
+                        if buddy in trigger.pluginProps['buddyId'] and trigger.pluginProps['commandCalled'] == (str(imsgcmdreceived).lower()):  # checking buddy in list of options
+                            if self.debugtriggers:
+                                self.logger.debug(u'Buddy Found:'+unicode(buddy)+' and Buddy in allowed list for trigger:'+unicode(trigger.pluginProps['buddyId'])+' Specific Command Called:' + unicode(trigger.pluginProps['commandCalled']))
+                            indigo.trigger.execute(trigger)
+                            Triggered = True
+                    else:
+                        if buddy in trigger.pluginProps['buddyId'] and trigger.pluginProps['commandCalled'] in (str(imsgcmdreceived).lower()):  # checking buddy in list of options
+                            if self.debugtriggers:
+                                self.logger.debug(u'Buddy Found:'+unicode(buddy)+' and Buddy in allowed list for trigger:'+unicode(trigger.pluginProps['buddyId'])+' Specific Command Called:' + unicode(trigger.pluginProps['commandCalled'])+ u' and text containing is True')
+                            indigo.trigger.execute(trigger)
+                            Triggered = True
 
             return Triggered
 

@@ -7,7 +7,7 @@
 			<Field id="commandCalled" type="textfield" defaultValue="">
 				<Label>Command Received:</Label>
 			</Field>
-		  <Field id="sep622" type="separator"/>
+
     <Field id="space112" type="label" fontSize="small" fontColor="black">
     <Label>
         The iMsg sent to Indigo iMsg Computer - use all lowercase for box above
@@ -15,9 +15,19 @@
         is converted to all lowercase before checks.
         Pays to avoid extra non-number and non-letter characters if can.
     </Label>
+     <Field id="sepa622" type="separator"/>
     </Field>
+            <Field id="anyStringcheck" type="checkbox" defaultValue="false">
+				<Label>Contains text Trigger:</Label>
+			</Field>
 
-
+    <Field id="space11a2" type="label" fontSize="small" fontColor="black">
+    <Label>           If this box is unchecked the trigger will only be run if the EXACT text is received.
+           If this box is checked: the trigger will be run if the text is received within the
+           complete message .Beware if checked and triggering on short words may get
+           false triggers
+    </Label>
+    </Field>
         </ConfigUI>
     </Event>
 
@@ -46,8 +56,18 @@
         Pays to avoid extra non-number and non-letter characters if can.
     </Label>
     </Field>
+    <Field id="sepaa622" type="separator"/>
+            <Field id="anyStringcheck" type="checkbox" defaultValue="false">
+				<Label>Contains text Trigger:</Label>
+			</Field>
 
-
+    <Field id="space11aa2" type="label" fontSize="small" fontColor="black">
+    <Label>           If this box is unchecked the trigger will only be run if the EXACT text is received.
+           If this box is checked: the trigger will be run if the text is received within the
+           complete message .Beware if checked and triggering on short words may get
+           false triggers
+    </Label>
+    </Field>
         </ConfigUI>
     </Event>
 </Events>
