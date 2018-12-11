@@ -821,11 +821,15 @@ AND datetime(messageT.date/1000000000 + strftime("%s", "2001-01-01") ,"unixepoch
                 try:
                     device = indigo.devices[device_name]
                     statusofDevice = 'unknown'
-                    if hasattr(device, "displayStateValRaw") and device.displayStateValRaw in ['0', False, True]:
+                    if hasattr(device, "displayStateValRaw"):
                         if self.debugextra:
-                            self.logger.debug(u' Device:'+unicode(device_name)+ ': displaystateValRaw:'+unicode(device.displayStateValRaw)+' : displayStateValUi:'+unicode(device.displayStateValUi))
+                            statusofDevice = device.displayStateValRaw
+                            self.logger.debug(u' Device:'+unicode(device_name)+ ': displaystateValRaw:'+unicode(device.displayStateValRaw))
                             self.logger.debug(u'  Device:'+unicode(device))
+
                         if hasattr(device, 'displayStateValUi'):
+                            if self.debugextra:
+                                self.logger.debug(u' Device:' + unicode(device_name) +' : displayStateValUi:'+unicode(device.displayStateValUi))
                             newstatus = device.displayStateValUi
                             if device.displayStateValUi == '0':
                                 newstatus = 'off'
