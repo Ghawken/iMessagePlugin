@@ -822,8 +822,14 @@ AND datetime(messageT.date/1000000000 + strftime("%s", "2001-01-01") ,"unixepoch
                     device = indigo.devices[device_name]
                     statusofDevice = 'unknown'
                     if hasattr(device, "displayStateValRaw") and device.displayStateValRaw in ['0', False, True]:
+                        if self.debugextra:
+                            self.logger.debug(u' Device:'+unicode(device_name)+ ': displaystateValRaw:'+unicode(device.displayStateValRaw)+' : displayStateValUi:'+unicode(device.displayStateValUi))
+                            self.logger.debug(u'  Device:'+unicode(device))
                         if hasattr(device, 'displayStateValUi'):
-                            statusofDevice = device.displayStateValUi
+                            newstatus = device.displayStateValUi
+                            if device.displayStateValUi == '0':
+                                newstatus = 'off'
+                            statusofDevice = newstatus
                     self.as_sendmessage(buddy, 'Current Status of ' + devicetoaction +' is '+statusofDevice)
                 except:
                     self.logger.exception(u'Caught Exception in device Status intent')
