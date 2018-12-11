@@ -1002,6 +1002,23 @@ AND datetime(messageT.date/1000000000 + strftime("%s", "2001-01-01") ,"unixepoch
 
         self.updater = GitHubPluginUpdater(self)
 
+    def validateEventConfigUi(self, valuesDict, typeId, eventId):
+        if self.debugextra:
+            self.logger.debug(u'validateEventConfigUi called..')
+        errorDict = indigo.Dict()
+        # make lower case
+        try:
+            commandCalled = str(valuesDict['commandCalled'] ).lower()
+            # strip out extra things
+            commandCalled = re.sub(r'([^ A-Za-z0-9]+?)', '', commandCalled)
+            valuesDict['commandCalled']= commandCalled
+            return (True,valuesDict)
+        except:
+            errorDict['commandCalled'] = 'Error with this entry.  No special characters allowed'
+            return (False, valuesDict, errorDict)
+
+
+
     def validatePrefsConfigUi(self, valuesDict):
 
         error_msg_dict = indigo.Dict()
@@ -2178,9 +2195,7 @@ AND datetime(messageT.date/1000000000 + strftime("%s", "2001-01-01") ,"unixepoch
 
         Triggered = False
 
-
-
-        imsgcmdreceived = re.sub(r'([^a-zA-Z ]+?)', '', imsgcmdreceived)
+        imsgcmdreceived = re.sub(r'([^ A-Za-z0-9]+?)', '', imsgcmdreceived)
         if self.debugtriggers:
             self.logger.debug(u'Removed extra characters from cmd received:'+imsgcmdreceived)
 
