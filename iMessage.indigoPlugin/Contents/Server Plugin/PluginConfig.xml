@@ -56,8 +56,10 @@
         <Label/>
         <Description>Use all Indigo Devices:</Description>
     </Field>
+          <Field id="configInfo" alingwithControl='true' justify='left' type="textfield" fontColor="red" readonly="true" visibleBindingId="usewit_Ai" visibleBindingValue="true">
+    </Field>
 
-          <Field id="space2ae3" type="label" justify="right" fontSize="small" fontColor="black" visibleBindingId="usewit_Ai" visibleBindingValue="true" >
+          <Field id="space2ae3" type="label" fontSize="small" fontColor="black" visibleBindingId="usewit_Ai" visibleBindingValue="true" >
     <Label>
         Enabling this will send ALL indigo devices to Wit.Ai App
         Disabling will only send those you have indicated with witai in Notes
@@ -76,8 +78,6 @@
 				<CallbackMethod>wit_ThreadCreate</CallbackMethod>
       </Field>
 
-
-
     <Field id="space2ae" type="label" fontSize="small" fontColor="black" visibleBindingId="usewit_Ai" visibleBindingValue="true" >
     <Label>
         This will use the Access Token above to create a new Indigo iMessage Wit.Ai App.
@@ -87,10 +87,9 @@
 
         It will run in a seperate thread.        Once Complete - Indigo log will let you know
     </Label>
-
   </Field>
-     <Field id="sep921" type="separator" visibleBindingId="usewit_Ai" visibleBindingValue="true" />
 
+     <Field id="sep921" type="separator" visibleBindingId="usewit_Ai" visibleBindingValue="true" />
   <Field id="space1a20" type="label" alignText="left" visibleBindingId="usewit_Ai" visibleBindingValue="true">
     <Label>Wit.Ai Update:</Label>
   </Field>
@@ -102,6 +101,7 @@
 				<Title>Update Wit.AI App</Title>
 				<CallbackMethod>wit_ThreadUpdateApp</CallbackMethod>
        </Field>
+
     <Field id="space2221ae" type="label" fontSize="small" fontColor="black" visibleBindingId="usewit_Ai" visibleBindingValue="true">
     <Label>
          This will send any new information to wit.ai.  Click this if have updated the devices
@@ -131,7 +131,9 @@
 				<Title>Delete Wit.AI App</Title>
 				<CallbackMethod>wit_Delete</CallbackMethod>
       </Field>
-   <Field id="space2aaeae" type="label" fontSize="small" fontColor="black" visibleBindingId="usewit_Ai" visibleBindingValue="true">
+
+
+    <Field id="space2aaeae" type="label" fontSize="small" fontColor="black" visibleBindingId="usewit_Ai" visibleBindingValue="true">
     <Label>
         This will completely, irreversibly delete the wit.ai App
         Do this if wish to start again, prior to pressing the Generate New App button

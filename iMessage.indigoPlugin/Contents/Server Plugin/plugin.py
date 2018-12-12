@@ -1051,6 +1051,8 @@ AND datetime(messageT.date/1000000000 + strftime("%s", "2001-01-01") ,"unixepoch
             valuesDict['app_id'] = self.app_id
             self.logger.debug(u'Main_Access_Token:' + unicode(self.access_token))
 
+        valuesDict['configInfo']=''
+
         if self.debugexceptions:
             self.logger.debug(u"{0:=^130}".format(""))
             self.logger.debug(unicode(self.pluginPrefs))
@@ -1353,9 +1355,9 @@ AND datetime(messageT.date/1000000000 + strftime("%s", "2001-01-01") ,"unixepoch
         json = rsp.json()
 
         if 'error' in json:
-            self.logger.error(u'Wit responded with an error: ' + json['error'])
+            self.logger.error(u'Wit responded with an error: ' + unicode(json['error']))
 
-        self.logger.debug('%s %s %s', meth, full_url, json)
+        self.logger.debug('%s %s %s', unicode(meth), unicode(full_url), unicode(json))
         return json
 
     def witReqSpeech(self, access_token, meth, path, params,  **kwargs):
@@ -1435,12 +1437,20 @@ AND datetime(messageT.date/1000000000 + strftime("%s", "2001-01-01") ,"unixepoch
         self.myThread = threading.Thread(target=self.witai_CreateApp, args=())
         #self.myThread.daemon = True
         self.myThread.start()
+        t.sleep(5)
+        valuesDict['main_access_token']=self.main_access_token
+        valuesDict['app_id']=self.app_id
+        if self.main_access_token !='':
+            valuesDict['configInfo']='Wit.Ai App Generated.  Now Sending Data. Will Take a while.'
+        return valuesDict
 
     def wit_ThreadUpdateApp(self,valuesDict):
         if self.debugextra:
             self.logger.debug(u'Thread Update Wit.ai App Started..')
         self.myThreadUpdate = threading.Thread(target=self.wit_updateDevices, args=())
         self.myThreadUpdate.start()
+        valuesDict['configInfo']='Updating wit.Ai App......'
+        return valuesDict
 
     def wit_Delete(self, valuesDict):
 
@@ -1462,17 +1472,21 @@ AND datetime(messageT.date/1000000000 + strftime("%s", "2001-01-01") ,"unixepoch
 
             if checkappexists == False:
                 self.logger.info(u'No Wit.Ai App appears to exist.')
+                valuesDict['configInfo']='No Wit.AI App appears to exist'
             else:
                 delete_app = self.wit_deleteapp(self.access_token)
                 self.logger.debug(unicode(delete_app))
-
+                if delete_app:
+                    valuesDict['configInfo']='Wit.Ai Application has been successfully deleted'
+                else:
+                    valuesDict['configInfo']='An error occured in the deletion of the wit.ai App'
             self.pluginPrefs['main_access_token']= ''
             self.pluginPrefs['app_id']= ''
             self.savePluginPrefs()
-            self.logger.debug(u'---- Saved PluginPrefs ------')
-            self.logger.debug(unicode(self.pluginPrefs))
             self.main_access_token = ''
-            return
+            valuesDict['main_access_token'] =''
+            valuesDict['app_id']=''
+            return valuesDict
 
         except:
             self.logger.info(u'Error within Delete app: Resetting all access tokens.')
@@ -1485,7 +1499,10 @@ AND datetime(messageT.date/1000000000 + strftime("%s", "2001-01-01") ,"unixepoch
             self.access_token = ''
             if self.debugexceptions:
                 self.logger.exception(u'Exception in Delete App')
-            return
+            valuesDict['main_access_token'] =''
+            valuesDict['app_id']=''
+            valuesDict['configInfo']='Error Deleting wit.ai application. Please try again.'
+            return valuesDict
 
     def wit_updateDevices(self):
 
@@ -1599,11 +1616,15 @@ AND datetime(messageT.date/1000000000 + strftime("%s", "2001-01-01") ,"unixepoch
                     else:
                         description = str(device.description)
                         if description != '' and description.startswith('witai'):
-                            x=x+8
+                            x=x+10
                             devicename = str(device.name)
                             array = '''{"text":"What is the status of '''+ devicename +'''","entities":[{"entity":"intent","value":"device_status"},{"entity":"device_name","value":"'''+devicename+'''"}]}'''
                             base.append(json.loads(array))
                             array = '''{"text":"What is the state of '''+ devicename +'''","entities":[{"entity":"intent","value":"device_status"},{"entity":"device_name","value":"'''+devicename+'''"}]}'''
+                            base.append(json.loads(array))
+                            array = '''{"text":"What is the current status of '''+ devicename +'''","entities":[{"entity":"intent","value":"device_status"},{"entity":"device_name","value":"'''+devicename+'''"}]}'''
+                            base.append(json.loads(array))
+                            array = '''{"text":"What is the current state of '''+ devicename +'''","entities":[{"entity":"intent","value":"device_status"},{"entity":"device_name","value":"'''+devicename+'''"}]}'''
                             base.append(json.loads(array))
                             array = '''{"text":"Is the '''+ devicename +''' off? ","entities":[{"entity":"intent","value":"device_status"},{"entity":"device_name","value":"'''+devicename+'''"}]}'''
                             base.append(json.loads(array))
@@ -2083,7 +2104,8 @@ AND datetime(messageT.date/1000000000 + strftime("%s", "2001-01-01") ,"unixepoch
         if deletenewapp.get('success')==True:
             self.logger.info(u'Wit.Ai Indigo-iMessage App Deleted')
             self.main_access_token = ''
-
+            return True
+        return False
 
     def wit_createapp(self, access_token):
 
@@ -2091,7 +2113,7 @@ AND datetime(messageT.date/1000000000 + strftime("%s", "2001-01-01") ,"unixepoch
             self.logger.debug(u'Create New Wit.Ai App')
         params = {}
         params['v'] = '20181110'
-        array = '''{"name":"Indigo-iMessage", "lang":"en","private":"false"}'''
+        array = '''{"name":"Indigo-iMessage-6", "lang":"en","private":"false"}'''
         createnewapp = self.witReq(access_token, 'POST','/apps',params, array)
         self.logger.debug(u'Reply Create App:'+unicode(createnewapp))
 
@@ -2125,7 +2147,7 @@ AND datetime(messageT.date/1000000000 + strftime("%s", "2001-01-01") ,"unixepoch
         self.logger.debug(u'Get Apps:'+unicode(getapp))
 
         for i in getapp:
-            if i['name']== 'Indigo-iMessage':
+            if i['name']== 'Indigo-iMessage-6':
                 self.logger.debug(u'Found App:'+i['name'])
                 self.logger.debug(u'Found App ID:'+i['id'])
                 self.app_id = i['id']
