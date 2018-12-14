@@ -32,6 +32,8 @@ class Plugin(indigo.PluginBase):
     def __init__(self, pluginId, pluginDisplayName, pluginVersion, pluginPrefs):
         indigo.PluginBase.__init__(self, pluginId, pluginDisplayName, pluginVersion, pluginPrefs)
 
+        self.ipaddress = indigo.server.address
+        self.username = str(os.getlogin())
         self.pathtoPlugin = os.getcwd()
         self.startingUp = True
         self.pluginIsInitializing = True
@@ -68,6 +70,7 @@ class Plugin(indigo.PluginBase):
         self.openStore = self.pluginPrefs.get('openStore', False)
         self.use_witAi = self.pluginPrefs.get('usewit_Ai', False)
 
+        self.configInfo =''
         self.wit_alldevices = self.pluginPrefs.get('wit_alldevices', False)
         self.resetLastCommand = t.time()+60
         self.next_update_check = t.time()
@@ -172,6 +175,7 @@ class Plugin(indigo.PluginBase):
             self.debugLog(u"closedPrefsConfigUi() method called.")
         if userCancelled:
             self.debugLog(u"User prefs dialog cancelled.")
+            self.configInfo = ''
 
         if not userCancelled:
 
@@ -205,6 +209,7 @@ class Plugin(indigo.PluginBase):
                 self.logger.debug(u"{0:=^130}".format(""))
                 self.logger.debug(unicode(valuesDict))
 
+            self.configInfo = ''
 
         return True
 
@@ -1027,6 +1032,16 @@ AND datetime(messageT.date/1000000000 + strftime("%s", "2001-01-01") ,"unixepoch
             errorDict['commandCalled'] = 'Error with this entry.  No special characters allowed'
             return (False, valuesDict, errorDict)
 
+    def UIrefreshMethod(self, valuesDict, typeId="", devId=None):
+        errorsDict = indigo.Dict()
+        if self.debugextra:
+            self.logger.debug(u'UIrefreshMethod called..')
+            self.logger.debug(u'configInfo equals:'+unicode(self.configInfo))
+        valuesDict['configInfo']= self.configInfo
+        valuesDict['main_access_token']=self.main_access_token
+        valuesDict['app_id']=self.app_id
+
+        return (valuesDict, errorsDict)
 
 
     def validatePrefsConfigUi(self, valuesDict):
@@ -1052,6 +1067,9 @@ AND datetime(messageT.date/1000000000 + strftime("%s", "2001-01-01") ,"unixepoch
             self.logger.debug(u'Main_Access_Token:' + unicode(self.access_token))
 
         valuesDict['configInfo']=''
+        self.configInfo =''
+
+        self.logger.error(unicode(valuesDict['configInfo']))
 
         if self.debugexceptions:
             self.logger.debug(u"{0:=^130}".format(""))
@@ -1434,14 +1452,10 @@ AND datetime(messageT.date/1000000000 + strftime("%s", "2001-01-01") ,"unixepoch
     def wit_ThreadCreate(self, valuesDict):
         if self.debugextra:
             self.logger.debug(u'Thread Create Wit.ai App Started..')
+
         self.myThread = threading.Thread(target=self.witai_CreateApp, args=())
         #self.myThread.daemon = True
         self.myThread.start()
-        t.sleep(5)
-        valuesDict['main_access_token']=self.main_access_token
-        valuesDict['app_id']=self.app_id
-        if self.main_access_token !='':
-            valuesDict['configInfo']='Wit.Ai App Generated.  Now Sending Data. Will Take a while.'
         return valuesDict
 
     def wit_ThreadUpdateApp(self,valuesDict):
@@ -1449,10 +1463,12 @@ AND datetime(messageT.date/1000000000 + strftime("%s", "2001-01-01") ,"unixepoch
             self.logger.debug(u'Thread Update Wit.ai App Started..')
         self.myThreadUpdate = threading.Thread(target=self.wit_updateDevices, args=())
         self.myThreadUpdate.start()
-        valuesDict['configInfo']='Updating wit.Ai App......'
+        self.configInfo='update'
         return valuesDict
 
     def wit_Delete(self, valuesDict):
+
+        self.configInfo = 'delete'
 
         if self.debugextra:
             self.logger.debug(u'Thread Delete Wit.ai App Started..')
@@ -1472,14 +1488,17 @@ AND datetime(messageT.date/1000000000 + strftime("%s", "2001-01-01") ,"unixepoch
 
             if checkappexists == False:
                 self.logger.info(u'No Wit.Ai App appears to exist.')
-                valuesDict['configInfo']='No Wit.AI App appears to exist'
+                self.configInfo='delexists'
+                self.app_id=''
+                self.main_access_token=''
             else:
+
                 delete_app = self.wit_deleteapp(self.access_token)
                 self.logger.debug(unicode(delete_app))
                 if delete_app:
-                    valuesDict['configInfo']='Wit.Ai Application has been successfully deleted'
+                    self.configInfo='delsuccess'
                 else:
-                    valuesDict['configInfo']='An error occured in the deletion of the wit.ai App'
+                    self.configInfo='delerror'
             self.pluginPrefs['main_access_token']= ''
             self.pluginPrefs['app_id']= ''
             self.savePluginPrefs()
@@ -1501,7 +1520,7 @@ AND datetime(messageT.date/1000000000 + strftime("%s", "2001-01-01") ,"unixepoch
                 self.logger.exception(u'Exception in Delete App')
             valuesDict['main_access_token'] =''
             valuesDict['app_id']=''
-            valuesDict['configInfo']='Error Deleting wit.ai application. Please try again.'
+            self.configInfo='delerror'
             return valuesDict
 
     def wit_updateDevices(self):
@@ -1757,6 +1776,7 @@ AND datetime(messageT.date/1000000000 + strftime("%s", "2001-01-01") ,"unixepoch
             self.logger.debug(unicode(jsonbase))
             self.logger.debug(unicode(replyend))
             self.logger.info(u'Imessage Plugin:  wit.Ai Device successfully updated.')
+            self.configInfo = 'upComplete'
         except:
             self.logger.exception(u'Update Code Exception Caught:')
 
@@ -1765,7 +1785,7 @@ AND datetime(messageT.date/1000000000 + strftime("%s", "2001-01-01") ,"unixepoch
         if self.debugextra:
             self.logger.debug(u'Wit.Ai Create App called')
         self.logger.debug(u'********** Main Access Token: Equals:'+self.main_access_token)
-
+        self.configInfo = 'generate'
         # create new wit.ai app
         self.main_access_token = self.pluginPrefs.get('main_access_token','')
         self.logger.debug(u'********** Main Access Token: Equals:' + self.main_access_token)
@@ -1788,6 +1808,7 @@ AND datetime(messageT.date/1000000000 + strftime("%s", "2001-01-01") ,"unixepoch
         if checkappexists:
             self.logger.info(u'Wit.Ai App already exists.  Please use the update Button instead.')
             self.logger.info(u'or alternatively to start again.  Please delete button and recreate.')
+            self.configInfo='errGenerateExists'
             return
 
         base =[]
@@ -2091,6 +2112,7 @@ AND datetime(messageT.date/1000000000 + strftime("%s", "2001-01-01") ,"unixepoch
         del base[:]
 
         self.logger.error(u'Indigo iMessage wit.ai Application Created Successfully.')
+        self.configInfo = 'createsuccess'
 
     def wit_deleteapp(self, access_token):
 
@@ -2104,6 +2126,7 @@ AND datetime(messageT.date/1000000000 + strftime("%s", "2001-01-01") ,"unixepoch
         if deletenewapp.get('success')==True:
             self.logger.info(u'Wit.Ai Indigo-iMessage App Deleted')
             self.main_access_token = ''
+            self.app_id =''
             return True
         return False
 
@@ -2113,7 +2136,13 @@ AND datetime(messageT.date/1000000000 + strftime("%s", "2001-01-01") ,"unixepoch
             self.logger.debug(u'Create New Wit.Ai App')
         params = {}
         params['v'] = '20181110'
-        array = '''{"name":"Indigo-iMessage-6", "lang":"en","private":"false"}'''
+
+        nameofapp = self.username+'-Indigo-iMessage'
+
+       # array = '''{"name":"Indigo-iMessage-6", "lang":"en","private":"false"}'''
+
+        array = '''{"name":"''' + nameofapp +'''", "lang":"en","private":"false"}'''
+
         createnewapp = self.witReq(access_token, 'POST','/apps',params, array)
         self.logger.debug(u'Reply Create App:'+unicode(createnewapp))
 
@@ -2147,7 +2176,7 @@ AND datetime(messageT.date/1000000000 + strftime("%s", "2001-01-01") ,"unixepoch
         self.logger.debug(u'Get Apps:'+unicode(getapp))
 
         for i in getapp:
-            if i['name']== 'Indigo-iMessage-6':
+            if i['name']== self.username+'-Indigo-iMessage':
                 self.logger.debug(u'Found App:'+i['name'])
                 self.logger.debug(u'Found App ID:'+i['id'])
                 self.app_id = i['id']
@@ -2202,6 +2231,9 @@ AND datetime(messageT.date/1000000000 + strftime("%s", "2001-01-01") ,"unixepoch
 
         self.logger.info(u"{0:<30} {1}".format("Backup Directory:", self.backupfilename))
         self.logger.info(u"{0:<30} {1}".format("SQL Database Location:", self.filename))
+        self.logger.info(u"{0:<30} {1}".format("Plugin Path:", self.pathtoPlugin))
+        self.logger.info(u"{0:<30} {1}".format("IP Address:", self.ipaddress))
+        self.logger.info(u"{0:<30} {1}".format("Current Username:", self.username))
         self.logger.info(u"{0:<30} {1}".format("Wit.Ai App_id:", self.app_id))
         self.logger.info(u"{0:<30} {1}".format("Wit.Ai Access_Code:", self.access_token))
         self.logger.info(u"{0:=^130}".format(""))

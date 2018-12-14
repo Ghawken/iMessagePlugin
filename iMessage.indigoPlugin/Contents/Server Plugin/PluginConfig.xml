@@ -46,19 +46,49 @@
   <Field id="space120" type="label" alignText="left">
     <Label>Wit.Ai AI:</Label>
   </Field>
-     <Field id="usewit_Ai" type="checkbox" defaultValue="false" tooltip="Enabling will use Wit_Ai.">
+
+          <Field id="configInfo" justify='left' type="textfield" hidden='true' >
+          </Field>
+            <Field id="InfogenerateApp" alignwithControl='true' justify='left' type="label" fontColor="red" visibleBindingId="configInfo" visibleBindingValue="generate">
+            <Label>         Generating a Wit.Ai Application....  </Label>
+            </Field>
+              <Field id="errGenerate" justify='left' type="label" fontColor="red" visibleBindingId="configInfo" visibleBindingValue="errGenerateExists">
+            <Label>         Error Generating a Wit.Ai Application. It already Exists. Delete First.</Label>
+            </Field>
+                  <Field id="generateSucess" justify='left' type="label" fontColor="red" visibleBindingId="configInfo" visibleBindingValue="createsuccess">
+            <Label>         Successfully Generated a Wit.Ai Application....</Label>
+            </Field>
+              <Field id="updating" justify='left' type="label" fontColor="red" visibleBindingId="configInfo" visibleBindingValue="update">
+            <Label>         Updating Wit.Ai App this might take some time and you can close dialog.</Label>
+            </Field>
+              <Field id="updateComplete" justify='left' type="label" fontColor="red" visibleBindingId="configInfo" visibleBindingValue="upComplete">
+            <Label>         Updating Wit.Ai App Completed Successfully.</Label>
+            </Field>
+                   <Field id="deleting" justify='left' type="label" fontColor="red" visibleBindingId="configInfo" visibleBindingValue="delete">
+            <Label>         Deleting Wit.Ai App ....</Label>
+            </Field>
+            <Field id="delComplete" justify='left' type="label" fontColor="red" visibleBindingId="configInfo" visibleBindingValue="delsuccess">
+            <Label>         Successfully deleted Wit.Ai App ....</Label>
+            </Field>
+                 <Field id="deleteerror" justify='left' type="label" fontColor="red" visibleBindingId="configInfo" visibleBindingValue="delexists">
+            <Label>         Error Deleting Wit.Ai App. It doesn't seem to Exist....</Label>
+            </Field>
+                     <Field id="deleteerror2" justify='left' type="label" fontColor="red" visibleBindingId="configInfo" visibleBindingValue="delerr">
+            <Label>         Error Deleting Wit.Ai App.  Perhaps try again?.</Label>
+            </Field>
+
+          <Field id="refreshCallbackMethod" type='textfield' hidden='true' defaultValue="UIrefreshMethod">
+          </Field>
+
+<Field id="usewit_Ai" type="checkbox" defaultValue="false" tooltip="Enabling will use Wit_Ai.">
         <Label/>
         <Description>Use Wit.Ai Processing:</Description>
     </Field>
 
-
     <Field id="wit_alldevices" type="checkbox" tooltip="Enabling will send all devices to Wit.ai." visibleBindingId="usewit_Ai" visibleBindingValue="true">
         <Label/>
         <Description>Use all Indigo Devices:</Description>
-    </Field>
-          <Field id="configInfo" alingwithControl='true' justify='left' type="textfield" fontColor="red" readonly="true" visibleBindingId="usewit_Ai" visibleBindingValue="true">
-    </Field>
-
+    </Field>F
           <Field id="space2ae3" type="label" fontSize="small" fontColor="black" visibleBindingId="usewit_Ai" visibleBindingValue="true" >
     <Label>
         Enabling this will send ALL indigo devices to Wit.Ai App
