@@ -2168,6 +2168,11 @@ AND datetime(messageT.date/1000000000 + strftime("%s", "2001-01-01") ,"unixepoch
 
         if self.debugextra:
             self.logger.debug(u'Get App Id ')
+
+        if self.app_id !='':
+            self.logger.info(u'App ID exists, presuming App exists.')
+            return True
+
         params = {}
         params['v'] = '20181110'
         params['limit'] = '100'
@@ -2185,6 +2190,8 @@ AND datetime(messageT.date/1000000000 + strftime("%s", "2001-01-01") ,"unixepoch
                 self.logger.debug(u'---- Saved PluginPrefs ------')
                 self.logger.debug(unicode(self.pluginPrefs))
                 return True
+
+
         return False
 
 
