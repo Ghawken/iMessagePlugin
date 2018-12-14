@@ -1069,7 +1069,7 @@ AND datetime(messageT.date/1000000000 + strftime("%s", "2001-01-01") ,"unixepoch
         valuesDict['configInfo']=''
         self.configInfo =''
 
-        self.logger.error(unicode(valuesDict['configInfo']))
+        self.logger.debug(unicode(valuesDict['configInfo']))
 
         if self.debugexceptions:
             self.logger.debug(u"{0:=^130}".format(""))
