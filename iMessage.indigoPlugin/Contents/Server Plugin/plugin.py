@@ -21,6 +21,7 @@ import json
 import re
 import threading
 import subprocess
+import platform
 
 try:
     import indigo
@@ -36,6 +37,7 @@ class Plugin(indigo.PluginBase):
         self.username = str(os.getlogin())
         self.pathtoPlugin = os.getcwd()
         self.startingUp = True
+        self.systemVersion = int(platform.release()[:2])  ## take first two digits and make an int: 18-Mojave, 17 High ierra, 16 - Sierra
         self.pluginIsInitializing = True
         self.pluginIsShuttingDown = False
         self.prefsUpdated = False
@@ -47,6 +49,9 @@ class Plugin(indigo.PluginBase):
         self.logger.info(u"{0:<30} {1}".format("Indigo version:", indigo.server.version))
         self.logger.info(u"{0:<30} {1}".format("Python version:", sys.version.replace('\n', '')))
         self.logger.info(u"{0:<30} {1}".format("Python Directory:", sys.prefix.replace('\n', '')))
+        self.logger.info(u"{0:<30} {1}".format("System Release:", platform.release() ))
+        self.logger.info(u"{0:<30} {1}".format("System Release Short:", self.systemVersion))
+        self.logger.info(u"{0:<30} {1}".format("System Version:", platform.version() ))
         self.logger.info(u"{0:=^130}".format(""))
 
         pfmt = logging.Formatter('%(asctime)s.%(msecs)03d\t[%(levelname)8s] %(name)20s.%(funcName)-25s%(msg)s',
@@ -343,11 +348,16 @@ class Plugin(indigo.PluginBase):
         #     self.debugLog(u"fetch messages() method called.")
         cursor = self.connection.cursor()
 
-        sqlcommand = '''
-SELECT attachmentT.filename FROM message messageT INNER JOIN attachment attachmentT INNER JOIN message_attachment_join meAtJoinT ON attachmentT.ROWID= meAtJoinT.attachment_id WHERE meAtJoinT.message_id=messageT.ROWID
-AND datetime(messageT.date/1000000000 + strftime("%s", "2001-01-01") ,"unixepoch","localtime") >= datetime('now','-120 seconds', 'localtime');     
-                   '''
-
+        if self.systemVersion >=17:
+            sqlcommand = '''
+    SELECT attachmentT.filename FROM message messageT INNER JOIN attachment attachmentT INNER JOIN message_attachment_join meAtJoinT ON attachmentT.ROWID= meAtJoinT.attachment_id WHERE meAtJoinT.message_id=messageT.ROWID
+    AND datetime(messageT.date/1000000000 + strftime("%s", "2001-01-01") ,"unixepoch","localtime") >= datetime('now','-120 seconds', 'localtime');     
+                       '''
+        else:
+            sqlcommand = '''
+            SELECT attachmentT.filename FROM message messageT INNER JOIN attachment attachmentT INNER JOIN message_attachment_join meAtJoinT ON attachmentT.ROWID= meAtJoinT.attachment_id WHERE meAtJoinT.message_id=messageT.ROWID
+            AND datetime(messageT.date + strftime("%s", "2001-01-01") ,"unixepoch","localtime") >= datetime('now','-120 seconds', 'localtime');     
+                               '''
         cursor.execute(sqlcommand)
         result = cursor.fetchall()
 
@@ -364,14 +374,26 @@ AND datetime(messageT.date/1000000000 + strftime("%s", "2001-01-01") ,"unixepoch
        #     self.debugLog(u"fetch messages() method called.")
         cursor = self.connection.cursor()
 
-        sqlcommand = '''
-           SELECT handle.id, message.text, message.is_audio_message
-             FROM message INNER JOIN handle 
-             ON message.handle_id = handle.ROWID 
-             WHERE is_from_me=0 AND 
-             datetime(message.date/1000000000 + strftime("%s", "2001-01-01") ,"unixepoch","localtime") >= datetime('now','-10 seconds', 'localtime')
-             ORDER BY message.date ASC;      
-           '''
+        #below is needed for older than Mojave
+        if self.systemVersion >=17:
+            sqlcommand = '''
+              SELECT handle.id, message.text, message.is_audio_message
+                FROM message INNER JOIN handle 
+                ON message.handle_id = handle.ROWID 
+                WHERE is_from_me=0 AND 
+                datetime(message.date/1000000000 + strftime("%s", "2001-01-01") ,"unixepoch","localtime") >= datetime('now','-10 seconds', 'localtime')
+                ORDER BY message.date ASC;      
+              '''
+        else:
+            sqlcommand = '''
+             SELECT handle.id, message.text, message.date
+                 FROM message INNER JOIN handle 
+                 ON message.handle_id = handle.ROWID 
+                 WHERE is_from_me=0 AND 
+                 datetime(message.date+ strftime("%s", "2001-01-01") ,"unixepoch","localtime") >= datetime('now','-10 seconds', 'localtime')
+                 ORDER BY message.date ASC;
+                 '''
+
 
         # ## Still doesn't help with group chat
         # sqlcommand = '''
@@ -2235,6 +2257,8 @@ AND datetime(messageT.date/1000000000 + strftime("%s", "2001-01-01") ,"unixepoch
                 self.logger.info(u"{0:<30} {1}".format("Triggers:", trigger.pluginTypeId +'  :  '+ trigger.name))
         self.logger.info(u"{0:<30} {1}".format("Awaiting Confirmation:", self.awaitingConfirmation))
         self.logger.info(u"{0:<30} {1}".format("Reset Last Command:", self.resetLastCommand))
+        self.logger.info(u"{0:<30} {1}".format("System Version:", platform.release() ))
+        self.logger.info(u"{0:<30} {1}".format("System Release:", platform.version() ))
 
         self.logger.info(u"{0:<30} {1}".format("Backup Directory:", self.backupfilename))
         self.logger.info(u"{0:<30} {1}".format("SQL Database Location:", self.filename))
