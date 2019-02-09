@@ -26,22 +26,7 @@
     <Label>Show Buddy Handle in Log:</Label>
     <Description>Enable/Disable</Description>
   </Field>
-  <Field id="space1" type="label" fontColor="black">
-    <Label>Check for Updates:</Label>
-  </Field>
-  <Field id="sep6" type="separator"/>
-  <Field id="space2" type="label" fontSize="small" fontColor="black">
-    <Label>The amount of time that the plugin will wait between checking for updated version</Label>
-  </Field>
 
-  <Field id="configUpdaterInterval" type="textfield" defaultValue="24" tooltip="Select preference for how often updates will be checked">
-    <Label>Update Check Interval:(hours)</Label>
-  </Field>
-
-    <Field id="openStore" type="checkbox" tooltip='Enabling with open Plugin Store for download'>
-        <Label>Automatically Open Plugin Store if an update is available.</Label>
-        <Description>Enable/Disable</Description>
-    </Field>
  <Field id="sep9" type="separator"/>
   <Field id="space120" type="label" alignText="left">
     <Label>Wit.Ai AI:</Label>

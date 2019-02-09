@@ -13,7 +13,7 @@ import time as t
 import os
 import sys
 import shutil
-from ghpu import GitHubPluginUpdater
+#from ghpu import GitHubPluginUpdater
 import sqlite3
 import applescript
 import requests
@@ -67,7 +67,7 @@ class Plugin(indigo.PluginBase):
         self.logger.debug(u"logLevel = " + str(self.logLevel))
         self.triggers = {}
         self.pluginVersion = pluginVersion
-        self.updateFrequency = float(self.pluginPrefs.get('updateFrequency', "24")) * 60.0 * 60.0
+        #self.updateFrequency = float(self.pluginPrefs.get('updateFrequency', "24")) * 60.0 * 60.0
         self.showBuddies = self.pluginPrefs.get('showBuddies', False)
         self.debugextra = self.pluginPrefs.get('debugextra', False)
         self.debugtriggers = self.pluginPrefs.get('debugtriggers', False)
@@ -78,7 +78,7 @@ class Plugin(indigo.PluginBase):
         self.configInfo =''
         self.wit_alldevices = self.pluginPrefs.get('wit_alldevices', False)
         self.resetLastCommand = t.time()+60
-        self.next_update_check = t.time()
+        #self.next_update_check = t.time()
         self.lastCommandsent = dict()
         self.lastBuddy =''
         self.awaitingConfirmation = []    # buddy handle within here if waiting a reply yes or no
@@ -111,8 +111,8 @@ class Plugin(indigo.PluginBase):
         self.app_id = self.pluginPrefs.get('app_id','')
         self.allowedBuddies = self.pluginPrefs.get('allowedBuddies','')
         self.prefServerTimeout = int(self.pluginPrefs.get('configMenuServerTimeout', "15"))
-        self.configUpdaterInterval = self.pluginPrefs.get('configUpdaterInterval', 24)
-        self.configUpdaterForceUpdate = self.pluginPrefs.get('configUpdaterForceUpdate', False)
+        #self.configUpdaterInterval = self.pluginPrefs.get('configUpdaterInterval', 24)
+       # self.configUpdaterForceUpdate = self.pluginPrefs.get('configUpdaterForceUpdate', False)
 
         oldPluginVersion = pluginPrefs.get('loadedPluginVersion', '')
         if oldPluginVersion != unicode(pluginVersion):
@@ -190,7 +190,7 @@ class Plugin(indigo.PluginBase):
             self.debugexceptions = valuesDict.get('debugexceptions', False)
             self.debugtriggers = valuesDict.get('debugtriggers', False)
             self.prefsUpdated = True
-            self.updateFrequency = float(valuesDict.get('updateFrequency', "24")) * 60.0 * 60.0
+            #self.updateFrequency = float(valuesDict.get('updateFrequency', "24")) * 60.0 * 60.0
 
             try:
                 self.logLevel = int(valuesDict[u"showDebugLevel"])
@@ -252,19 +252,19 @@ class Plugin(indigo.PluginBase):
             self.debugLog(u"Full BuddyList equals:"+unicode(buddyList))
         return buddyList
     ###  Update ghpu Routines.
-
-    def checkForUpdates(self):
-
-        updateavailable = self.updater.getLatestVersion()
-        if updateavailable and self.openStore:
-            self.logger.info(u'iMessage: Update Checking.  Update is Available.  Taking you to plugin Store. ')
-            self.sleep(2)
-            self.pluginstoreUpdate()
-        elif updateavailable and not self.openStore:
-            self.errorLog(u'iMessage: Update Checking.  Update is Available.  Please check Store for details/download.')
-
-    def updatePlugin(self):
-        self.updater.update()
+    #
+    # def checkForUpdates(self):
+    #
+    #     updateavailable = self.updater.getLatestVersion()
+    #     if updateavailable and self.openStore:
+    #         self.logger.info(u'iMessage: Update Checking.  Update is Available.  Taking you to plugin Store. ')
+    #         self.sleep(2)
+    #         self.pluginstoreUpdate()
+    #     elif updateavailable and not self.openStore:
+    #         self.errorLog(u'iMessage: Update Checking.  Update is Available.  Please check Store for details/download.')
+    #
+    # def updatePlugin(self):
+    #     self.updater.update()
 
     def pluginstoreUpdate(self):
         iurl = 'http://www.indigodomo.com/pluginstore/195/'
@@ -294,17 +294,17 @@ class Plugin(indigo.PluginBase):
                         self.resetLastCommand = t.time()+120
                         if self.debugextra:
                             self.logger.debug(u'Now Self.lastcommandsent :'+unicode(self.lastCommandsent))
-                if self.updateFrequency > 0:
-                    if t.time() > self.next_update_check:
-                        try:
-                            self.checkForUpdates()
-                            self.next_update_check = t.time() + self.updateFrequency
-                        except:
-                            self.logger.debug(
-                                u'Error checking for update - ? No Internet connection.  Checking again in 24 hours')
-                            self.next_update_check = self.next_update_check + 86400
-                            if self.debugexceptions:
-                                self.logger.exception(u'and Caught Exception:')
+                # if self.updateFrequency > 0:
+                #     if t.time() > self.next_update_check:
+                #         try:
+                #             self.checkForUpdates()
+                #             self.next_update_check = t.time() + self.updateFrequency
+                #         except:
+                #             self.logger.debug(
+                #                 u'Error checking for update - ? No Internet connection.  Checking again in 24 hours')
+                #             self.next_update_check = self.next_update_check + 86400
+                #             if self.debugexceptions:
+                #                 self.logger.exception(u'and Caught Exception:')
         except self.StopThread:
             self.debugLog(u'Restarting/or error. Stopping  thread.')
             self.closesql()
@@ -1037,7 +1037,7 @@ class Plugin(indigo.PluginBase):
         if self.debugextra:
             self.debugLog(u"Starting Plugin. startup() method called.")
 
-        self.updater = GitHubPluginUpdater(self)
+        #self.updater = GitHubPluginUpdater(self)
 
     def validateEventConfigUi(self, valuesDict, typeId, eventId):
         if self.debugextra:
