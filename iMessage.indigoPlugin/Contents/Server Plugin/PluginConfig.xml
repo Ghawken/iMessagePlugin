@@ -26,7 +26,10 @@
     <Label>Show Buddy Handle in Log:</Label>
     <Description>Enable/Disable</Description>
   </Field>
-
+    <Field id="saveVariable" type="checkbox" tooltip="Save all messages to Variable.">
+    <Label>Save incoming Messages to Indigo Variable:</Label>
+    <Description>Enable/Disable</Description>
+  </Field>
  <Field id="sep9" type="separator"/>
   <Field id="space120" type="label" alignText="left">
     <Label>Wit.Ai AI:</Label>

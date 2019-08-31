@@ -69,6 +69,7 @@ class Plugin(indigo.PluginBase):
         self.pluginVersion = pluginVersion
         #self.updateFrequency = float(self.pluginPrefs.get('updateFrequency', "24")) * 60.0 * 60.0
         self.showBuddies = self.pluginPrefs.get('showBuddies', False)
+        self.saveVariables = self.pluginPrefs.get('saveVariables', False)
         self.debugextra = self.pluginPrefs.get('debugextra', False)
         self.debugtriggers = self.pluginPrefs.get('debugtriggers', False)
         self.debugexceptions = self.pluginPrefs.get('debugexceptions', False)
@@ -201,6 +202,7 @@ class Plugin(indigo.PluginBase):
             self.use_witAi = valuesDict.get('usewit_Ai', False)
             self.indigo_log_handler.setLevel(self.logLevel)
             self.showBuddies = valuesDict.get('showBuddies', False)
+            self.saveVariables = valuesDict.get('saveVariables', False)
             self.allowedBuddies = valuesDict.get('allowedBuddies', '')
             self.openStore = valuesDict.get('openStore', False)
             self.logger.debug(u"logLevel = " + str(self.logLevel))
@@ -503,6 +505,20 @@ class Plugin(indigo.PluginBase):
 ########
 # Parse Messages
 ########
+    def updateVar(self, name, value):
+        self.logger.debug(u'updatevar run.')
+        if not ('iMessage' in indigo.variables.folders):
+            # create folder
+            folderId = indigo.variables.folder.create('iMessage')
+            folder = folderId.id
+        else:
+            folder = indigo.variables.folders.getId('iMessage')
+
+        if name not in indigo.variables:
+            NewVar = indigo.variable.create(name, value=value, folder=folder)
+        else:
+            indigo.variable.updateValue(name, value)
+        return
 
     def checkTimeout(self):
         if self.debugextra:
@@ -614,6 +630,7 @@ class Plugin(indigo.PluginBase):
 
         for key,val in messages.items():
             self.lastBuddy = key
+            self.updateVar(key, val.lower())
             if self.triggerCheck(key, 'commandReceived', val.lower() ):
                 self.resetLastCommand = t.time()+120
                 messages.pop(key, None)
