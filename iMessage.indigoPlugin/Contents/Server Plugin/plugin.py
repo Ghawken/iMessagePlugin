@@ -69,7 +69,7 @@ class Plugin(indigo.PluginBase):
         self.pluginVersion = pluginVersion
         #self.updateFrequency = float(self.pluginPrefs.get('updateFrequency', "24")) * 60.0 * 60.0
         self.showBuddies = self.pluginPrefs.get('showBuddies', False)
-        self.saveVariables = self.pluginPrefs.get('saveVariables', False)
+        self.saveVariables = self.pluginPrefs.get('saveVariable', False)
         self.debugextra = self.pluginPrefs.get('debugextra', False)
         self.debugtriggers = self.pluginPrefs.get('debugtriggers', False)
         self.debugexceptions = self.pluginPrefs.get('debugexceptions', False)
@@ -202,7 +202,7 @@ class Plugin(indigo.PluginBase):
             self.use_witAi = valuesDict.get('usewit_Ai', False)
             self.indigo_log_handler.setLevel(self.logLevel)
             self.showBuddies = valuesDict.get('showBuddies', False)
-            self.saveVariables = valuesDict.get('saveVariables', False)
+            self.saveVariables = valuesDict.get('saveVariable', False)
             self.allowedBuddies = valuesDict.get('allowedBuddies', '')
             self.openStore = valuesDict.get('openStore', False)
             self.logger.debug(u"logLevel = " + str(self.logLevel))
@@ -630,7 +630,8 @@ class Plugin(indigo.PluginBase):
 
         for key,val in messages.items():
             self.lastBuddy = key
-            self.updateVar(key, val.lower())
+            if self.saveVariables:
+                self.updateVar(key, val.lower())
             if self.triggerCheck(key, 'commandReceived', val.lower() ):
                 self.resetLastCommand = t.time()+120
                 messages.pop(key, None)
