@@ -662,7 +662,48 @@ class Plugin(indigo.PluginBase):
                         messages.pop(key, None)
                         self.logger.debug(unicode(reply))
                         self.witai_dealwithreply(reply, key, val)
+                else:  ## not using witai
+                    if val == 'AUDIOFILE' and self.saveVariables:
+                        self.logger.debug(u'AUDIOFILE recognised.  Now finding Attachment with SQL query...')
+                        ## send to audio file routine
+                        filepath = self.process_getaudiofilepath()
+                        if filepath is None or filepath == '':
+                            self.logger.debug(u'No Message able to be converted:')
+                        else:
+                            self.updateVar('AudioPath',filepath)
+
         return
+
+    def process_getaudiofilepath(self):   #also converts to mp3
+        if self.debugextra:
+            self.logger.debug(u'Get Audio File Path')
+        try:
+            filepath = self.sql_fetchattachments()
+            file_touse = [item for sublist in filepath for item in sublist]
+            self.logger.debug(u'filepath:' + unicode(file_touse[-1]))
+            file_touse = file_touse[-1]  # last item in list
+            file_touse = os.path.expanduser(file_touse)
+            self.logger.debug(u'Expanded FilePath:' + unicode(file_touse))
+
+            ffmpegpath = self.pathtoPlugin + '/ffmpeg/ffmpeg'
+            mp4fileout = file_touse[:-3] + 'mp3'
+
+            argstopass = '"' + ffmpegpath + '"' + ' -i "' + str(file_touse) + '" -q:a 0 "' + str(mp4fileout) + '"'
+            p1 = subprocess.Popen([argstopass], shell=True)
+
+            output, err = p1.communicate()
+            self.logger.debug(unicode(argstopass))
+            self.logger.debug('ffmpeg return code:' + unicode(p1.returncode) + ' output:' + unicode(
+                output) + ' error:' + unicode(err))
+            return mp4fileout
+
+            #self.updateVar('AudioPath', mp4fileout)
+
+        except Exception as e:
+            self.logger.exception(u'Caught Exception within ffmpeg conversion')
+            return ''
+
+
     def process_convert_audiofile(self):
         if self.debugextra:
             self.logger.debug(u'Processing AUdio File')
@@ -685,6 +726,8 @@ class Plugin(indigo.PluginBase):
             self.logger.debug(unicode(argstopass))
             self.logger.debug('ffmpeg return code:' + unicode(p1.returncode) + ' output:' + unicode(
                     output) + ' error:' + unicode(err))
+            if self.saveVariables:
+                self.updateVar('AudioPath', mp4fileout)
 
         except Exception as e:
             self.logger.exception(u'Caught Exception within ffmpeg conversion')
