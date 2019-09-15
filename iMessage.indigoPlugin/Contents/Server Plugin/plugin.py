@@ -685,18 +685,7 @@ class Plugin(indigo.PluginBase):
             file_touse = file_touse[-1]  # last item in list
             file_touse = os.path.expanduser(file_touse)
             self.logger.debug(u'Expanded FilePath:' + unicode(file_touse))
-
-            ffmpegpath = self.pathtoPlugin + '/ffmpeg/ffmpeg'
-            mp4fileout = file_touse[:-3] + 'mp3'
-
-            argstopass = '"' + ffmpegpath + '"' + ' -i "' + str(file_touse) + '" -q:a 0 "' + str(mp4fileout) + '"'
-            p1 = subprocess.Popen([argstopass], shell=True)
-
-            output, err = p1.communicate()
-            self.logger.debug(unicode(argstopass))
-            self.logger.debug('ffmpeg return code:' + unicode(p1.returncode) + ' output:' + unicode(
-                output) + ' error:' + unicode(err))
-            return mp4fileout
+            return file_touse
 
             #self.updateVar('AudioPath', mp4fileout)
 
@@ -728,7 +717,7 @@ class Plugin(indigo.PluginBase):
             self.logger.debug('ffmpeg return code:' + unicode(p1.returncode) + ' output:' + unicode(
                     output) + ' error:' + unicode(err))
             if self.saveVariables:
-                self.updateVar('AudioPath', mp4fileout)
+                self.updateVar('AudioPath', file_touse)
 
         except Exception as e:
             self.logger.exception(u'Caught Exception within ffmpeg conversion')
