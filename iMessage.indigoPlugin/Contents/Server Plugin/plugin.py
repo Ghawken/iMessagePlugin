@@ -50,7 +50,9 @@ class Plugin(indigo.PluginBase):
         self.logger.info(u"{0:<30} {1}".format("Python version:", sys.version.replace('\n', '')))
         self.logger.info(u"{0:<30} {1}".format("Python Directory:", sys.prefix.replace('\n', '')))
         self.logger.info(u"{0:<30} {1}".format("System Release:", platform.release() ))
+
         self.logger.info(u"{0:<30} {1}".format("System Release Short:", self.systemVersion))
+
         self.logger.info(u"{0:<30} {1}".format("System Version:", platform.version() ))
         self.logger.info(u"{0:=^130}".format(""))
 
@@ -107,7 +109,6 @@ class Plugin(indigo.PluginBase):
             self.access_token = self.pluginPrefs.get('access_token', '')
         else:
             self.access_token = self.main_access_token
-
 
         self.app_id = self.pluginPrefs.get('app_id','')
         self.allowedBuddies = self.pluginPrefs.get('allowedBuddies','')
@@ -452,23 +453,34 @@ class Plugin(indigo.PluginBase):
             self.debugLog(u"as_sendmessage() method called.")
             self.logger.debug(u'Sending iMsg:'+unicode(imsgMessage)+u' to Buddy/User:'+unicode(imsgUser))
 
-        ascript_string = '''
-        set sendThis to "''' + imsgMessage+'''"  
-        tell application "Messages"
-	        set myid to get id of first service
-	        set theBuddy to buddy "''' + imsgUser + '''" of service id myid
-	        send sendThis to theBuddy
-        end tell
-        '''
+        if self.systemVersion >=20:
+            ascript_string = '''
+                    set sendThis to "''' + imsgMessage + '''"  
+                    tell application "Messages"
+            	        set myid to get id of first account
+            	        set theBuddy to participant "''' + imsgUser + '''" of account id myid
+            	        send sendThis to theBuddy
+                    end tell
+                    '''
+        else:
+            ascript_string = '''
+            set sendThis to "''' + imsgMessage+'''"  
+            tell application "Messages"
+                set myid to get id of first service
+                set theBuddy to buddy "''' + imsgUser + '''" of service id myid
+                send sendThis to theBuddy
+            end tell
+            '''
         my_ascript_from_string = applescript.AppleScript(source=ascript_string)
         reply = my_ascript_from_string.run()
         if self.debugextra:
             self.logger.debug(u'AppleScript Reply:'+unicode(reply))
 
-    def as_sendgroupmessage(self, imsgUser, imsgMessage):
+    def as_sendgroupmessage(self, imsgUser, imsgMessage):  ## not used... revisit now with Big Sur
         if self.debugextra:
             self.debugLog(u"as_sendGroupmessage() method called.")
             self.logger.debug(u'Sending GroupiMsg:' + unicode(imsgMessage) + u' to GroupID:' + unicode(imsgUser))
+
 
         ascript_string = '''
                 set sendThis to "''' + imsgMessage + '''"  
@@ -490,14 +502,24 @@ class Plugin(indigo.PluginBase):
             self.debugLog(u"as_sendpicture() method called.")
             self.logger.debug(u'Sending Picture/File:' + unicode(imsgFile) + u' to Buddy/User:' + unicode(imsgUser))
 
-        ascript_string = '''
-        set theAttachment to POSIX file "''' + imsgFile + '''"  
-        tell application "Messages"
-            set myid to get id of first service
-            set theBuddy to buddy "''' + imsgUser + '''" of service id myid
-            send theAttachment to theBuddy
-        end tell
-        '''
+        if self.systemVersion >=20:
+            ascript_string = '''
+            set theAttachment to POSIX file "''' + imsgFile + '''"  
+            tell application "Messages"
+                set myid to get id of first account
+                set theBuddy to participant "''' + imsgUser + '''" of account id myid
+                send theAttachment to theBuddy
+            end tell
+            '''
+        else:
+            ascript_string = '''
+            set theAttachment to POSIX file "''' + imsgFile + '''"  
+            tell application "Messages"
+                set myid to get id of first service
+                set theBuddy to buddy "''' + imsgUser + '''" of service id myid
+                send theAttachment to theBuddy
+            end tell
+            '''
         my_ascript_from_string = applescript.AppleScript(source=ascript_string)
         reply = my_ascript_from_string.run()
         if self.debugextra:
