@@ -1071,7 +1071,7 @@ class Plugin(indigo.PluginBase):
         if self.debugextra:
             self.debugLog(u"checkanswer() method called.")
 
-        valid = {"yes": True, "y": True, "ye": True, 'yeah':True, 'ok':True,  "no": False, "n": False, 'nope':False, 'never':False}
+        valid = {"yes": True, "yea":True, "y": True, "ye": True, 'yeah':True, "okay":True, 'ok':True,  "no": False, "n": False, 'nope':False, 'never':False}
 
         if message.lower() in valid:
             if valid[message.lower()]:
