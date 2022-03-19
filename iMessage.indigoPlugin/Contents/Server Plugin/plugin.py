@@ -93,7 +93,7 @@ class Plugin(indigo.PluginBase):
         folderLocation = MAChome + "Documents/Indigo-iMessagePlugin/"
         self.saveDirectory = folderLocation
         self.backupfilename = os.path.expanduser('~/Documents/Indigo-iMsgBackup/')
-        self.logger.debug(u'Self.SaveDirectory equals:'+unicode(self.saveDirectory))
+        self.logger.debug(u'Self.SaveDirectory equals:'+str(self.saveDirectory))
 
         try:
             if not os.path.exists(self.saveDirectory):
@@ -117,9 +117,9 @@ class Plugin(indigo.PluginBase):
        # self.configUpdaterForceUpdate = self.pluginPrefs.get('configUpdaterForceUpdate', False)
 
         oldPluginVersion = pluginPrefs.get('loadedPluginVersion', '')
-        if oldPluginVersion != unicode(pluginVersion):
+        if oldPluginVersion != str(pluginVersion):
             self.logger.info(u'First run of new version, performing some maintenance')
-            self.performPluginUpgradeMaintenance(oldPluginVersion, unicode(pluginVersion))
+            self.performPluginUpgradeMaintenance(oldPluginVersion, str(pluginVersion))
 
         self.pluginIsInitializing = False
 
@@ -134,7 +134,7 @@ class Plugin(indigo.PluginBase):
             diriMsgdb = os.path.expanduser('~/Library/Messages/')
             if os.path.exists(self.backupfilename)==False:
                 os.mkdir(self.backupfilename)
-            self.logger.info(u'Backing up Current iMsg Database Directory to :' + unicode(self.backupfilename))
+            self.logger.info(u'Backing up Current iMsg Database Directory to :' + str(self.backupfilename))
             src_files = os.listdir(diriMsgdb)
             for file_name in src_files:
                 full_filename = os.path.join(diriMsgdb,file_name)
@@ -213,9 +213,9 @@ class Plugin(indigo.PluginBase):
             if self.debugexceptions:
                 self.logger.debug(u"{0:=^130}".format(""))
                 self.logger.debug(u'----------- Closed Prefs Config UI ----------------')
-                self.logger.debug(unicode(self.pluginPrefs))
+                self.logger.debug(str(self.pluginPrefs))
                 self.logger.debug(u"{0:=^130}".format(""))
-                self.logger.debug(unicode(valuesDict))
+                self.logger.debug(str(valuesDict))
 
             self.configInfo = ''
 
@@ -245,14 +245,14 @@ class Plugin(indigo.PluginBase):
                 for buddy in myBuddies:
                     buddyList.append(tuple((buddy, buddy)))
                     if self.debugextra:
-                        self.debugLog(u"Adding allowed Buddy:"+unicode(buddy)+u' to list.')
+                        self.debugLog(u"Adding allowed Buddy:"+str(buddy)+u' to list.')
             else:
                 buddyList = [('option1', 'No Allowed Buddies Setup PluginConfig'),('option2','Please Setup in Plugin Config')]
         else:
             buddyList = [('option1', 'No Allowed Buddies are Setup in PluginConfig'),
                          ('option2', 'Please Setup in Plugin Config')]
         if self.debugextra:
-            self.debugLog(u"Full BuddyList equals:"+unicode(buddyList))
+            self.debugLog(u"Full BuddyList equals:"+str(buddyList))
         return buddyList
     ###  Update ghpu Routines.
     #
@@ -296,7 +296,7 @@ class Plugin(indigo.PluginBase):
                         self.lastCommandsent.clear()
                         self.resetLastCommand = t.time()+120
                         if self.debugextra:
-                            self.logger.debug(u'Now Self.lastcommandsent :'+unicode(self.lastCommandsent))
+                            self.logger.debug(u'Now Self.lastcommandsent :'+str(self.lastCommandsent))
                 # if self.updateFrequency > 0:
                 #     if t.time() > self.next_update_check:
                 #         try:
@@ -322,7 +322,7 @@ class Plugin(indigo.PluginBase):
 
             self.filename = os.path.expanduser('~/Library/Messages/chat.db')
             if self.debugextra:
-                self.logger.debug(u'ConnectSQL: Filename location for iMsg chat.db equals:'+unicode(self.filename))
+                self.logger.debug(u'ConnectSQL: Filename location for iMsg chat.db equals:'+str(self.filename))
             self.connection = sqlite3.connect(self.filename)
             self.logger.info(u'Connection to iMsg Database Successful.')
         except:
@@ -368,8 +368,8 @@ class Plugin(indigo.PluginBase):
             return None
         else:
             if self.debugextra:
-                self.logger.debug(u'sql_fetchattachments: Not empty return:' + unicode(result))
-        self.logger.debug(u'SQL_Attachments found: Results:'+unicode(result))
+                self.logger.debug(u'sql_fetchattachments: Not empty return:' + str(result))
+        self.logger.debug(u'SQL_Attachments found: Results:'+str(result))
         return result
 
     def sql_fetchmessages(self):
@@ -415,7 +415,7 @@ class Plugin(indigo.PluginBase):
             return dict()
         else:
             if self.debugextra:
-                self.logger.debug(u'sql_fetchmessages: Not empty return:' + unicode(result))
+                self.logger.debug(u'sql_fetchmessages: Not empty return:' + str(result))
 
             newlist = []
             for items in result:
@@ -427,19 +427,19 @@ class Plugin(indigo.PluginBase):
                     newtuple = items[0], items[1]
                     newlist.append(newtuple)
 
-            self.logger.debug(u'newlist after checking audio file:'+unicode(newlist))
+            self.logger.debug(u'newlist after checking audio file:'+str(newlist))
 
             newmessages = [item for sublist in newlist for item in sublist]
             if self.debugextra:
                 self.logger.debug(u'Flatten Messages first:')
-                self.logger.debug(unicode(newmessages))
+                self.logger.debug(str(newmessages))
                 self.logger.debug(u'Then convert to Dict:')
 
             newmessagesdict = dict(zip(*[iter(newmessages)] * 2))
 
             if self.debugextra:
-                self.logger.debug(unicode('Coverted Dict:'))
-                self.logger.debug(unicode(newmessagesdict))
+                self.logger.debug(str('Coverted Dict:'))
+                self.logger.debug(str(newmessagesdict))
             return newmessagesdict
 
 #####
@@ -451,7 +451,7 @@ class Plugin(indigo.PluginBase):
     def as_sendmessage(self, imsgUser, imsgMessage):
         if self.debugextra:
             self.debugLog(u"as_sendmessage() method called.")
-            self.logger.debug(u'Sending iMsg:'+unicode(imsgMessage)+u' to Buddy/User:'+unicode(imsgUser))
+            self.logger.debug(u'Sending iMsg:'+str(imsgMessage)+u' to Buddy/User:'+str(imsgUser))
 
         if self.systemVersion >=20:
             ascript_string = '''
@@ -474,12 +474,12 @@ class Plugin(indigo.PluginBase):
         my_ascript_from_string = applescript.AppleScript(source=ascript_string)
         reply = my_ascript_from_string.run()
         if self.debugextra:
-            self.logger.debug(u'AppleScript Reply:'+unicode(reply))
+            self.logger.debug(u'AppleScript Reply:'+str(reply))
 
     def as_sendgroupmessage(self, imsgUser, imsgMessage):  ## not used... revisit now with Big Sur
         if self.debugextra:
             self.debugLog(u"as_sendGroupmessage() method called.")
-            self.logger.debug(u'Sending GroupiMsg:' + unicode(imsgMessage) + u' to GroupID:' + unicode(imsgUser))
+            self.logger.debug(u'Sending GroupiMsg:' + str(imsgMessage) + u' to GroupID:' + str(imsgUser))
 
 
         ascript_string = '''
@@ -494,13 +494,13 @@ class Plugin(indigo.PluginBase):
         my_ascript_from_string = applescript.AppleScript(source=ascript_string)
         reply = my_ascript_from_string.run()
         if self.debugextra:
-            self.logger.debug(unicode(reply))
+            self.logger.debug(str(reply))
 
 
     def as_sendpicture(self, imsgUser, imsgFile):
         if self.debugextra:
             self.debugLog(u"as_sendpicture() method called.")
-            self.logger.debug(u'Sending Picture/File:' + unicode(imsgFile) + u' to Buddy/User:' + unicode(imsgUser))
+            self.logger.debug(u'Sending Picture/File:' + str(imsgFile) + u' to Buddy/User:' + str(imsgUser))
 
         if self.systemVersion >=20:
             ascript_string = '''
@@ -523,7 +523,7 @@ class Plugin(indigo.PluginBase):
         my_ascript_from_string = applescript.AppleScript(source=ascript_string)
         reply = my_ascript_from_string.run()
         if self.debugextra:
-            self.logger.debug(unicode(reply))
+            self.logger.debug(str(reply))
 ########
 # Parse Messages
 ########
@@ -547,11 +547,11 @@ class Plugin(indigo.PluginBase):
             self.debugLog(u"checkTimeout method called.")
         for sublist in self.awaitingConfirmation:
             if t.time() > int(sublist[2]):
-                self.logger.debug(u'Timeout for '+unicode(sublist)+' occured.  Removing and sending timeout msg')
+                self.logger.debug(u'Timeout for '+str(sublist)+' occured.  Removing and sending timeout msg')
                 self.as_sendmessage(sublist[0],'Timeout waiting for reply')
                 self.awaitingConfirmation = [ subl for subl in self.awaitingConfirmation if subl[0]!=sublist[0] ]
                 if self.debugextra:
-                    self.logger.debug(u'self.awaitingConfirmation modified now equals:' + unicode(self.awaitingConfirmation))
+                    self.logger.debug(u'self.awaitingConfirmation modified now equals:' + str(self.awaitingConfirmation))
                 #make new nested list removing the most recent buddy handle
                 #  'buddy', 'AGtorun', 'timestamp', 'iMsgConfirmed'
         return
@@ -563,7 +563,7 @@ class Plugin(indigo.PluginBase):
 
         if self.debugextra:
             self.debugLog(u"parse messages() method called.")
-            self.logger.debug(u'Message Received: Message Info:'+unicode(messages))
+            self.logger.debug(u'Message Received: Message Info:'+str(messages))
 
         # if self.lastcommand == messages:
         #     if self.debugextra:
@@ -576,71 +576,71 @@ class Plugin(indigo.PluginBase):
 
         for key,val in messages.items():
             if self.debugextra:
-                self.logger.debug(u'Checking messages:  Received: Buddy :'+unicode(key)+ ' Received Message:'+unicode(val))
+                self.logger.debug(u'Checking messages:  Received: Buddy :'+str(key)+ ' Received Message:'+str(val))
             if key not in buddiescurrent:
                 buddiescurrent = buddiescurrent + (key,)
                 if self.debugextra:
-                    self.logger.debug(u'Buddies Current now equals:'+unicode(buddiescurrent))
+                    self.logger.debug(u'Buddies Current now equals:'+str(buddiescurrent))
 
         if self.showBuddies:
             self.logger.error(u'iMessage Received from Buddy(s):  Buddy(s) Handle Below:')
             for buddies in buddiescurrent:
-                self.logger.error(unicode(buddies))
+                self.logger.error(str(buddies))
 
-        for key, val in messages.items():
+        for key, val in messages.copy().items():
             if key in self.allowedBuddies:
                 if self.debugextra:
-                    self.logger.debug(u'Passed against allowed Buddies: ' + unicode(messages))
-                    self.logger.debug(u'Allowed Buddies Equal:'+unicode(self.allowedBuddies))
-                    self.logger.debug(u'Received Buddy equals:'+unicode(key))
+                    self.logger.debug(u'Passed against allowed Buddies: ' + str(messages))
+                    self.logger.debug(u'Allowed Buddies Equal:'+str(self.allowedBuddies))
+                    self.logger.debug(u'Received Buddy equals:'+str(key))
             else:
                 if self.debugextra:
-                    self.logger.debug(u'Message Received - but buddyhandle not allowed; Handled received equals:'+unicode(key))
-                    self.logger.debug(u'Allowed Buddies Equal:' + unicode(self.allowedBuddies))
+                    self.logger.debug(u'Message Received - but buddyhandle not allowed; Handled received equals:'+str(key))
+                    self.logger.debug(u'Allowed Buddies Equal:' + str(self.allowedBuddies))
                     self.logger.debug(u'Deleting this message, continuing with others parsing')
                 messages.pop(key, None)
 
         #self.lastcommand = messages
         #self.lastBuddy = messages[0]
-        for key,value in messages.items():
+        for key,value in messages.copy().items():
             for sublist in self.awaitingConfirmation:
                 if self.debugextra:
-                    self.logger.debug(u'self.awaitingConfirmation:'+unicode(self.awaitingConfirmation))
+                    self.logger.debug(u'self.awaitingConfirmation:'+str(self.awaitingConfirmation))
                 if sublist[0] == key:
                 # Buddle has a outstanding confirmation awaited.
                 # check against valid replies
                     if self.checkanswer(key,value,sublist):
                         if self.debugextra:
                             self.logger.debug(u'Confirmation received so deleting this message, ending.  No trigger check on this message.')
-                            self.logger.debug(u'messages equals:'+unicode(messages))
+                            self.logger.debug(u'messages equals:'+str(messages))
                         messages.pop(key, None)
-                        self.logger.debug(u'Message part deleted now equals:'+unicode(messages))
+                        self.logger.debug(u'Message part deleted now equals:'+str(messages))
 
         if self.debugextra:
-            self.logger.debug(u'SELF.lastcommand PRIOR equals:' + unicode(self.lastCommandsent))
+            self.logger.debug(u'SELF.lastcommand PRIOR equals:' + str(self.lastCommandsent))
 
-        for keymsg,valmsg in messages.items():
+        for keymsg,valmsg in messages.copy().items():
             # now check last message and don't act if the same
             # check if list nested or not
             if self.lastCommandsent:  # check not empty list
                 for keylast,vallast in self.lastCommandsent.items():
                     if self.debugextra:
-                        self.logger.debug(u'Checking last commands sent:'+unicode(keylast)+' : '+unicode(vallast) )
-                        self.logger.debug(u'LastCommandsent Key:'+unicode(keylast)+u' Messages Key:'+unicode(keymsg))
+                        self.logger.debug(u'Checking last commands sent:'+str(keylast)+' : '+str(vallast) )
+                        self.logger.debug(u'LastCommandsent Key:'+str(keylast)+u' Messages Key:'+str(keymsg))
                     if keymsg==keylast:
                         if self.debugextra:
-                            self.logger.debug(u'Buddy last command found: Buddy:'+unicode(keylast)+u' and last message:'+unicode(valmsg))
+                            self.logger.debug(u'Buddy last command found: Buddy:'+str(keylast)+u' and last message:'+str(valmsg))
                         if valmsg==vallast:
                             if self.debugextra:
-                                self.logger.debug(u'Same Message found.  This repeated message will be ignored. Message ignored: '+unicode(valmsg))
+                                self.logger.debug(u'Same Message found.  This repeated message will be ignored. Message ignored: '+str(valmsg))
                             messages.pop(keymsg, None)
                             if self.debugextra:
-                                self.logger.debug(u'Same Message found.  New Messages equals:'+unicode(messages))
+                                self.logger.debug(u'Same Message found.  New Messages equals:'+str(messages))
         # last message
         for key,val in messages.items():
             self.lastCommandsent[key]=val
             if self.debugextra:
-                self.logger.debug(u'Updated lastCommandsent:' + unicode(self.lastCommandsent))
+                self.logger.debug(u'Updated lastCommandsent:' + str(self.lastCommandsent))
 
         # if only one flatten the nest list as was causing issues
         # need now to deal with nested sometimes, list others - above
@@ -648,9 +648,9 @@ class Plugin(indigo.PluginBase):
         #self.lastCommandsent = [subl for subl in self.lastCommandsent if subl[0] != v[0]]
 
         if self.debugextra:
-            self.logger.debug(u'self.lastcommand equals:' + unicode(self.lastCommandsent))
+            self.logger.debug(u'self.lastcommand equals:' + str(self.lastCommandsent))
 
-        for key,val in messages.items():
+        for key,val in messages.copy().items():
             self.lastBuddy = key
             if self.saveVariables:
                 self.updateVar(key, val.lower())
@@ -659,7 +659,7 @@ class Plugin(indigo.PluginBase):
                 messages.pop(key, None)
                 if self.debugextra:
                     self.logger.debug(u'Command Sent received so deleting this message, ending.  No trigger check on this message.')
-                    self.logger.debug(u'messages equals:' + unicode(messages))
+                    self.logger.debug(u'messages equals:' + str(messages))
             else:
                 if self.use_witAi:
                     if val == 'AUDIOFILE':
@@ -673,7 +673,7 @@ class Plugin(indigo.PluginBase):
                         else:
                             self.resetLastCommand = t.time()
                             messages.pop(key, None)
-                            self.logger.debug(u'Message Recevied ='+unicode(converted_audio['_text']))
+                            self.logger.debug(u'Message Recevied ='+str(converted_audio['_text']))
                             self.as_sendmessage(key, 'I heard: '+converted_audio['_text'])
                             self.witai_dealwithreply(converted_audio,key,val)
                     else:
@@ -683,7 +683,7 @@ class Plugin(indigo.PluginBase):
 
                         reply = self.wit_message(val,context=None, n=None,verbose=None)
                         messages.pop(key, None)
-                        self.logger.debug(unicode(reply))
+                        self.logger.debug(str(reply))
                         self.witai_dealwithreply(reply, key, val)
                 else:  ## not using witai
                     if val == 'AUDIOFILE' and self.saveVariables:
@@ -703,10 +703,10 @@ class Plugin(indigo.PluginBase):
         try:
             filepath = self.sql_fetchattachments()
             file_touse = [item for sublist in filepath for item in sublist]
-            self.logger.debug(u'filepath:' + unicode(file_touse[-1]))
+            self.logger.debug(u'filepath:' + str(file_touse[-1]))
             file_touse = file_touse[-1]  # last item in list
             file_touse = os.path.expanduser(file_touse)
-            self.logger.debug(u'Expanded FilePath:' + unicode(file_touse))
+            self.logger.debug(u'Expanded FilePath:' + str(file_touse))
             return file_touse
 
             #self.updateVar('AudioPath', mp4fileout)
@@ -722,10 +722,10 @@ class Plugin(indigo.PluginBase):
 
         filepath = self.sql_fetchattachments()
         file_touse = [item for sublist in filepath for item in sublist]
-        self.logger.debug(u'filepath:' + unicode(file_touse[-1]))
+        self.logger.debug(u'filepath:' + str(file_touse[-1]))
         file_touse = file_touse[-1]  # last item in list
         file_touse = os.path.expanduser(file_touse)
-        self.logger.debug(u'Expanded FilePath:' + unicode(file_touse))
+        self.logger.debug(u'Expanded FilePath:' + str(file_touse))
 
         ffmpegpath = self.pathtoPlugin+'/ffmpeg/ffmpeg'
         mp4fileout = file_touse[:-3]+'mp3'
@@ -735,9 +735,9 @@ class Plugin(indigo.PluginBase):
             p1 = subprocess.Popen([argstopass], shell=True)
 
             output, err = p1.communicate()
-            self.logger.debug(unicode(argstopass))
-            self.logger.debug('ffmpeg return code:' + unicode(p1.returncode) + ' output:' + unicode(
-                    output) + ' error:' + unicode(err))
+            self.logger.debug(str(argstopass))
+            self.logger.debug('ffmpeg return code:' + str(p1.returncode) + ' output:' + str(
+                    output) + ' error:' + str(err))
             if self.saveVariables:
                 self.updateVar('AudioPath', file_touse)
 
@@ -750,7 +750,7 @@ class Plugin(indigo.PluginBase):
         with open(mp4fileout, 'rb') as f:
             resp = self.wit_speech(f, None,
                                    {'Content-Type': 'audio/mpeg3'})
-        self.logger.debug(unicode(resp))
+        self.logger.debug(str(resp))
 
         return resp
 
@@ -860,7 +860,7 @@ class Plugin(indigo.PluginBase):
             reply = reply['entities']
         else:
             self.logger.debug(u'No entities in reply.  ? Error from Wit.Ai:  Reply received folows:')
-            self.logger.debug(unicode(reply))
+            self.logger.debug(str(reply))
             return
         intent = self.first_entity_value(reply, 'intent')
         intent_confidence = self.first_entity_confidence(reply,'intent')
@@ -869,15 +869,15 @@ class Plugin(indigo.PluginBase):
         number = self.first_entity_value_number(reply, 'number')
 
         if intent:
-            self.logger.debug(u'Intent:' + unicode(intent) + u' and confidence:' + unicode(intent_confidence))
+            self.logger.debug(u'Intent:' + str(intent) + u' and confidence:' + str(intent_confidence))
             if intent=='device_action' and float(intent_confidence)>0.85:
-                self.logger.debug(u'Intent:' + unicode(intent))
+                self.logger.debug(u'Intent:' + str(intent))
                 if device_name is None:
                     self.logger.debug(u'Unsure as to which Device to act on.')
                     self.as_sendmessage(buddy, 'Sorry not sure which Device to act on.  Nothing done.')
                     return
                 else:
-                    self.logger.debug(u'Acting on Device:'+unicode(device_name))
+                    self.logger.debug(u'Acting on Device:'+str(device_name))
                     devicetoaction = device_name
                     #confidence = device_name['confidence']
                 if on_off is None:
@@ -885,7 +885,7 @@ class Plugin(indigo.PluginBase):
                     self.as_sendmessage(buddy, 'Sorry not sure what to do Device :'+devicetoaction)
                     return
                 else:
-                    self.logger.debug(u'On_Off action equals:'+unicode(on_off))
+                    self.logger.debug(u'On_Off action equals:'+str(on_off))
                     on_off_value = on_off  # either string on or off
                 # okay, now have confirmed devicename, and on_off just need to act.
                 if on_off_value == 'on':
@@ -907,13 +907,13 @@ class Plugin(indigo.PluginBase):
                     self.logger.debug(u'witAI Action: on_off not recognised.')
                     self.as_sendmessage(buddy, 'Command not recognised:' + devicetoaction)
             if intent =='device_status' and float(intent_confidence)>0.85:
-                self.logger.debug(u'Intent:' + unicode(intent))
+                self.logger.debug(u'Intent:' + str(intent))
                 if device_name is None:
                     self.logger.debug(u'Unsure as to which Device to act on.')
                     self.as_sendmessage(buddy, 'Sorry not sure which Device to act on.  Nothing done.')
                     return
                 else:
-                    self.logger.debug(u'Acting on Device:' + unicode(device_name))
+                    self.logger.debug(u'Acting on Device:' + str(device_name))
                     devicetoaction = device_name
                     # confidence = device_name['confidence']
                 # get device status
@@ -923,12 +923,12 @@ class Plugin(indigo.PluginBase):
                     if hasattr(device, "displayStateValRaw"):
                         if self.debugextra:
                             statusofDevice = device.displayStateValRaw
-                            self.logger.debug(u' Device:'+unicode(device_name)+ ': displaystateValRaw:'+unicode(device.displayStateValRaw))
-                            self.logger.debug(u'  Device:'+unicode(device))
+                            self.logger.debug(u' Device:'+str(device_name)+ ': displaystateValRaw:'+str(device.displayStateValRaw))
+                            self.logger.debug(u'  Device:'+str(device))
 
                         if hasattr(device, 'displayStateValUi'):
                             if self.debugextra:
-                                self.logger.debug(u' Device:' + unicode(device_name) +' : displayStateValUi:'+unicode(device.displayStateValUi))
+                                self.logger.debug(u' Device:' + str(device_name) +' : displayStateValUi:'+str(device.displayStateValUi))
                             newstatus = device.displayStateValUi
                             if device.displayStateValUi == '0':
                                 newstatus = 'off'
@@ -977,14 +977,14 @@ class Plugin(indigo.PluginBase):
                     self.as_sendmessage(buddy, 'Sorry not sure which Device to act on.  Nothing done.')
                     return
                 else:
-                    self.logger.debug(u'Acting on Device:'+unicode(device_name))
+                    self.logger.debug(u'Acting on Device:'+str(device_name))
                     devicetoaction = device_name
                 if number is None:
                     self.logger.debug(u'Unsure as to what to Dim by as no Number.')
                     self.as_sendmessage(buddy, 'Number missing. Sorry not sure what to do Device :' + devicetoaction)
                     return
                 else:
-                    self.logger.debug(u'Dim Number action equals:' + unicode(number))
+                    self.logger.debug(u'Dim Number action equals:' + str(number))
                     number_touse = int(number)
 
                 # okay, now have confirmed devicename, and on_off just need to act.
@@ -995,7 +995,7 @@ class Plugin(indigo.PluginBase):
                         self.logger.debug(u'Brightness exisits with device.')
                         indigo.dimmer.setBrightness(devicetoaction, number_touse)
                     else:
-                        self.logger.info(u'No Device Brightness found:'+unicode(devicetoaction))
+                        self.logger.info(u'No Device Brightness found:'+str(devicetoaction))
 
                 except:
                     self.logger.exception(u'Caught Exception finding Device.')
@@ -1007,7 +1007,7 @@ class Plugin(indigo.PluginBase):
                     self.as_sendmessage(buddy, 'Sorry not sure which Device to act on.  Nothing done.')
                     return
                 else:
-                    self.logger.debug(u'Acting on Device:' + unicode(device_name))
+                    self.logger.debug(u'Acting on Device:' + str(device_name))
                     devicetoaction = device_name
                 try:
                     temperature = ''
@@ -1031,7 +1031,7 @@ class Plugin(indigo.PluginBase):
 
                     else:
                         self.as_sendmessage(buddy, 'Unable to obtain tempeature from Device : ' + devicetoaction )
-                        self.logger.info(u'No Temperature reading from Device Found:' + unicode(devicetoaction))
+                        self.logger.info(u'No Temperature reading from Device Found:' + str(devicetoaction))
                 except:
                     self.logger.exception(u'Caught Exception finding Temperture Device.')
 
@@ -1042,7 +1042,7 @@ class Plugin(indigo.PluginBase):
                     self.as_sendmessage(buddy, 'Sorry not sure which Device to act on.  Nothing done.')
                     return
                 else:
-                    self.logger.debug(u'Acting on Device:' + unicode(device_name))
+                    self.logger.debug(u'Acting on Device:' + str(device_name))
                     devicetoaction = device_name
                 try:
                     location = ''
@@ -1061,7 +1061,7 @@ class Plugin(indigo.PluginBase):
                         return
                     else:
                         self.as_sendmessage(buddy, 'Unable to obtain location from Device : ' + devicetoaction)
-                        self.logger.info(u'No location reading from Device Found:' + unicode(devicetoaction))
+                        self.logger.info(u'No location reading from Device Found:' + str(devicetoaction))
                         return
                 except:
                     self.logger.exception(u'Caught Exception finding Location of Device.')
@@ -1083,7 +1083,7 @@ class Plugin(indigo.PluginBase):
                 self.as_sendmessage(sublist[0],sublist[3])
                 self.awaitingConfirmation = [ subl for subl in self.awaitingConfirmation if subl[0]!=buddyHandle ]
                 if self.debugextra:
-                    self.logger.debug(u'self.awaitingConfirmation now equals:' + unicode(self.awaitingConfirmation))
+                    self.logger.debug(u'self.awaitingConfirmation now equals:' + str(self.awaitingConfirmation))
                 #make new nested list removing the most recent buddy handle
                 #  'buddy', 'AGtorun', 'timestamp', 'iMsgConfirmed'
                 return True
@@ -1094,7 +1094,7 @@ class Plugin(indigo.PluginBase):
                 self.as_sendmessage(sublist[0], 'Ok.  No action Taken.')
                 self.awaitingConfirmation = [subl for subl in self.awaitingConfirmation if subl[0] != buddyHandle]
                 if self.debugextra:
-                    self.logger.debug(u'self.awaitingConfirmation now equals:' + unicode(self.awaitingConfirmation))
+                    self.logger.debug(u'self.awaitingConfirmation now equals:' + str(self.awaitingConfirmation))
                 return True
 
         return False
@@ -1130,7 +1130,7 @@ class Plugin(indigo.PluginBase):
         errorsDict = indigo.Dict()
         if self.debugextra:
             self.logger.debug(u'UIrefreshMethod called..')
-            self.logger.debug(u'configInfo equals:'+unicode(self.configInfo))
+            self.logger.debug(u'configInfo equals:'+str(self.configInfo))
         valuesDict['configInfo']= self.configInfo
         valuesDict['main_access_token']=self.main_access_token
         valuesDict['app_id']=self.app_id
@@ -1150,7 +1150,7 @@ class Plugin(indigo.PluginBase):
 
         if self.main_access_token == '':
             # self.access_token = valuesDict.get('access_token', '')
-            self.logger.debug(u'Access_Token:' + unicode(self.access_token))
+            self.logger.debug(u'Access_Token:' + str(self.access_token))
             # if self.main_access_token nil delete valuesDict otherwise will be resaved
             valuesDict['main_access_token'] = ''
             valuesDict['app_id'] = ''
@@ -1158,18 +1158,18 @@ class Plugin(indigo.PluginBase):
             self.access_token = self.main_access_token
             valuesDict['main_access_token'] = self.main_access_token
             valuesDict['app_id'] = self.app_id
-            self.logger.debug(u'Main_Access_Token:' + unicode(self.access_token))
+            self.logger.debug(u'Main_Access_Token:' + str(self.access_token))
 
         valuesDict['configInfo']=''
         self.configInfo =''
 
-        self.logger.debug(unicode(valuesDict['configInfo']))
+        self.logger.debug(str(valuesDict['configInfo']))
 
         if self.debugexceptions:
             self.logger.debug(u"{0:=^130}".format(""))
-            self.logger.debug(unicode(self.pluginPrefs))
+            self.logger.debug(str(self.pluginPrefs))
             self.logger.debug(u"{0:=^130}".format(""))
-            self.logger.debug(unicode(valuesDict))
+            self.logger.debug(str(valuesDict))
             # self.errorLog(u"Plugin configuration error: ")
 
         return True, valuesDict
@@ -1192,8 +1192,8 @@ class Plugin(indigo.PluginBase):
             buddyHandle = str(self.lastBuddy)
 
         if self.debugextra:
-            self.debugLog(u"sendImsgQuestion() buddyHandle:" + unicode(buddyHandle) + u' and theMessage:' + unicode(
-                theMessage) + u' and use lastBuddy:' + unicode(lastbuddy))
+            self.debugLog(u"sendImsgQuestion() buddyHandle:" + str(buddyHandle) + u' and theMessage:' + str(
+                theMessage) + u' and use lastBuddy:' + str(lastbuddy))
         if buddyHandle == '':
             self.logger.debug(u'Message sending aborted as buddyHandle is blank')
             self.logger.debug(u'If using LastBuddy need to send message before this is filled')
@@ -1208,7 +1208,7 @@ class Plugin(indigo.PluginBase):
                 if sublist[0] == buddyHandle:
                     self.logger.debug(u'buddyhandle already awaiting confirmation - End. Dont ask new Question')
                     if self.debugextra:
-                        self.logger.debug(u'self.awaitingConfirmation equals:' + unicode(self.awaitingConfirmation))
+                        self.logger.debug(u'self.awaitingConfirmation equals:' + str(self.awaitingConfirmation))
                     buddyalreadywaitingconfirmation= True
                     return  #
 
@@ -1216,23 +1216,23 @@ class Plugin(indigo.PluginBase):
             if buddyalreadywaitingconfirmation == False:  # check not already waiting - can ask two questions same time..
                 self.awaitingConfirmation.append(add)  # if not in there add
             if self.debugextra:
-                self.logger.debug(u'self.awaitingConfirmation now equals:'+unicode(self.awaitingConfirmation))
+                self.logger.debug(u'self.awaitingConfirmation now equals:'+str(self.awaitingConfirmation))
         except Exception as ex:
             errortype = type(ex).__name__
-            self.logger.debug(u'A error of type :'+unicode(errortype)+u' occured.  The longer message is :'+unicode(ex))
+            self.logger.debug(u'A error of type :'+str(errortype)+u' occured.  The longer message is :'+str(ex))
             if errortype == 'ScriptError':
                 if "Can?t get buddy id" in str(ex):
-                    self.logger.error(u'An error occured sending to buddy Handle:  '+unicode(buddyHandle))
+                    self.logger.error(u'An error occured sending to buddy Handle:  '+str(buddyHandle))
                     self.logger.error(u'It seems the buddy Handle is not correct.')
                     if self.debugexceptions:
                         self.logger.exception(u'Caught Exception:')
                 else:
                     self.logger.error(u'An Error occured within the iMsg AppleScript component - ScriptError')
-                    self.logger.error(u'The Error was :'+unicode(ex))
+                    self.logger.error(u'The Error was :'+str(ex))
                     if self.debugexceptions:
                         self.logger.exception(u'Caught Exception:')
             else:
-                self.logger.exception(u'An unhandled caught exception was caught here from SendiMsgQuestion:'+unicode(ex))
+                self.logger.exception(u'An unhandled caught exception was caught here from SendiMsgQuestion:'+str(ex))
         return
 
 
@@ -1246,8 +1246,8 @@ class Plugin(indigo.PluginBase):
             buddyHandle = str(self.lastBuddy)
 
         if self.debugextra:
-            self.debugLog(u"sendImsg() buddyHandle:" + unicode(buddyHandle) + u' and theMessage:' + unicode(
-                theMessage) + u' and use lastBuddy:' + unicode(lastbuddy))
+            self.debugLog(u"sendImsg() buddyHandle:" + str(buddyHandle) + u' and theMessage:' + str(
+                theMessage) + u' and use lastBuddy:' + str(lastbuddy))
         if buddyHandle == '':
             self.logger.debug(u'Message sending aborted as buddy Handle is blank')
             self.logger.debug(u'If using LastBuddy need to send message before this is filled')
@@ -1257,20 +1257,20 @@ class Plugin(indigo.PluginBase):
 
         except Exception as ex:
             errortype = type(ex).__name__
-            self.logger.debug(u'A error of type :'+unicode(errortype)+' occured.  The longer message is :'+unicode(ex.message))
+            self.logger.debug(u'A error of type :'+str(errortype)+' occured.  The longer message is :'+str(ex.message))
             if errortype == 'ScriptError':
                 if "Can?t get buddy id" in str(ex):
-                    self.logger.error(u'An error occured sending to buddy Handle:  '+unicode(buddyHandle))
+                    self.logger.error(u'An error occured sending to buddy Handle:  '+str(buddyHandle))
                     self.logger.error(u'It seems the buddy Handle is not correct.')
                     if self.debugexceptions:
                         self.logger.exception(u'Caught Exception:')
                 else:
                     self.logger.error(u'An Error occured within the iMsg AppleScript component - ScriptError')
-                    self.logger.error(u'The Error was :'+unicode(ex))
+                    self.logger.error(u'The Error was :'+str(ex))
                     if self.debugexceptions:
                         self.logger.exception(u'Caught Exception:')
             else:
-                self.logger.exception(u'An unhandled exception was caught here from SendiMsg:'+unicode(ex))
+                self.logger.exception(u'An unhandled exception was caught here from SendiMsg:'+str(ex))
         return
 
     def sendiMsgMsgPicture(self, action):
@@ -1284,8 +1284,8 @@ class Plugin(indigo.PluginBase):
             buddyHandle = str(self.lastBuddy)
 
         if self.debugextra:
-            self.debugLog(u"sendImsgMsgPicture() buddyHandle:" + unicode(buddyHandle) + u' and theMessage:' + unicode(
-                theMessage) + u' and use lastBuddy:' + unicode(lastbuddy))
+            self.debugLog(u"sendImsgMsgPicture() buddyHandle:" + str(buddyHandle) + u' and theMessage:' + str(
+                theMessage) + u' and use lastBuddy:' + str(lastbuddy))
         if buddyHandle == '':
             self.logger.debug(u'Message sending aborted as buddy Handle is blank')
             self.logger.debug(u'If using LastBuddy need to send message before this is filled')
@@ -1298,20 +1298,20 @@ class Plugin(indigo.PluginBase):
         except Exception as ex:
             errortype = type(ex).__name__
             self.logger.debug(
-                u'A error of type :' + unicode(errortype) + ' occured.  The longer message is :' + unicode(ex.message))
+                u'A error of type :' + str(errortype) + ' occured.  The longer message is :' + str(ex.message))
             if errortype == 'ScriptError':
                 if "Can?t get buddy id" in str(ex):
-                    self.logger.error(u'An error occured sending to buddy Handle:  ' + unicode(buddyHandle))
+                    self.logger.error(u'An error occured sending to buddy Handle:  ' + str(buddyHandle))
                     self.logger.error(u'It seems the buddy Handle is not correct.')
                     if self.debugexceptions:
                         self.logger.exception(u'Caught Exception:')
                 else:
                     self.logger.error(u'An Error occured within the iMsg AppleScript component - ScriptError')
-                    self.logger.error(u'The Error was :' + unicode(ex))
+                    self.logger.error(u'The Error was :' + str(ex))
                     if self.debugexceptions:
                         self.logger.exception(u'Caught Exception:')
             else:
-                self.logger.exception(u'An unhandled Caught exception was caught here from SendiMsg:' + unicode(ex))
+                self.logger.exception(u'An unhandled Caught exception was caught here from SendiMsg:' + str(ex))
         return
 
 
@@ -1327,8 +1327,8 @@ class Plugin(indigo.PluginBase):
             buddyHandle = str(self.lastBuddy)
 
         if self.debugextra:
-            self.debugLog(u"sendImsgPicture() buddyHandle:" + unicode(buddyHandle) + u' and theMessage:' + unicode(
-                theMessage) + u' and use lastBuddy:' + unicode(lastbuddy))
+            self.debugLog(u"sendImsgPicture() buddyHandle:" + str(buddyHandle) + u' and theMessage:' + str(
+                theMessage) + u' and use lastBuddy:' + str(lastbuddy))
         if buddyHandle == '':
             self.logger.debug(u'Message sending aborted as buddyHandle is blank')
             self.logger.debug(u'If using LastBuddy need to send message before this is filled')
@@ -1337,25 +1337,25 @@ class Plugin(indigo.PluginBase):
             self.as_sendpicture(buddyHandle, theMessage)
         except Exception as ex:
             errortype = type(ex).__name__
-            self.logger.debug(u'A error of type :'+unicode(errortype)+' occured.  The longer message is /n:'+unicode(ex))
+            self.logger.debug(u'A error of type :'+str(errortype)+' occured.  The longer message is /n:'+str(ex))
             if errortype == 'ScriptError':
                 if "Can?t get buddy id" in str(ex):
-                    self.logger.error(u'An error occured sending to buddy Handle:  '+unicode(buddyHandle))
+                    self.logger.error(u'An error occured sending to buddy Handle:  '+str(buddyHandle))
                     self.logger.error(u'It seems the buddy Handle is not correct.')
                     if self.debugexceptions:
                         self.logger.exception(u'Caught Exception:')
                 elif "Can?t get POSIX" in str(ex):
-                    self.logger.error(u'An error occured sending to buddy :  '+unicode(buddyHandle))
-                    self.logger.error(u'It seems that the File is not readable?  File given:'+unicode(theMessage))
+                    self.logger.error(u'An error occured sending to buddy :  '+str(buddyHandle))
+                    self.logger.error(u'It seems that the File is not readable?  File given:'+str(theMessage))
                     if self.debugexceptions:
                         self.logger.exception(u'Caught Exception:')
                 else:
                     self.logger.error(u'An Error occured within the iMsg AppleScript component - ScriptError')
-                    self.logger.error(u'The Error was :'+unicode(ex))
+                    self.logger.error(u'The Error was :'+str(ex))
                     if self.debugexceptions:
                         self.logger.exception(u'Caught Exception:')
             else:
-                self.logger.exception(u'An unhandled Caught exception was caught here from SendiMsgPicture:'+unicode(ex))
+                self.logger.exception(u'An unhandled Caught exception was caught here from SendiMsgPicture:'+str(ex))
 
         return
 
@@ -1369,8 +1369,8 @@ class Plugin(indigo.PluginBase):
             buddyHandle = str(self.lastBuddy)
 
         if self.debugextra:
-            self.debugLog(u"sendImsgPicture() buddyHandle:" + unicode(buddyHandle) + u' and theMessage:' + unicode(
-                theMessage) + u' and use lastBuddy:' + unicode(lastbuddy))
+            self.debugLog(u"sendImsgPicture() buddyHandle:" + str(buddyHandle) + u' and theMessage:' + str(
+                theMessage) + u' and use lastBuddy:' + str(lastbuddy))
         if buddyHandle == '':
             self.logger.debug(u'Message sending aborted as buddyHandle is blank')
             self.logger.debug(u'If using LastBuddy need to send message before this is filled')
@@ -1389,25 +1389,25 @@ class Plugin(indigo.PluginBase):
             self.as_sendpicture(buddyHandle, filetosave)
         except Exception as ex:
             errortype = type(ex).__name__
-            self.logger.debug(u'A error of type :'+unicode(errortype)+' occured.  The longer message is /n:'+unicode(ex))
+            self.logger.debug(u'A error of type :'+str(errortype)+' occured.  The longer message is /n:'+str(ex))
             if errortype == 'ScriptError':
                 if "Can?t get buddy id" in str(ex):
-                    self.logger.error(u'An error occured sending to buddy Handle:  '+unicode(buddyHandle))
+                    self.logger.error(u'An error occured sending to buddy Handle:  '+str(buddyHandle))
                     self.logger.error(u'It seems the buddy Handle is not correct.')
                     if self.debugexceptions:
                         self.logger.exception(u'Caught Exception:')
                 elif "Can?t get POSIX" in str(ex):
-                    self.logger.error(u'An error occured sending to buddy :  '+unicode(buddyHandle))
-                    self.logger.error(u'It seems that the File is not readable?  File given:'+unicode(theMessage))
+                    self.logger.error(u'An error occured sending to buddy :  '+str(buddyHandle))
+                    self.logger.error(u'It seems that the File is not readable?  File given:'+str(theMessage))
                     if self.debugexceptions:
                         self.logger.exception(u'Caught Exception:')
                 else:
                     self.logger.error(u'An Error occured within the iMsg AppleScript component - ScriptError')
-                    self.logger.error(u'The Error was :'+unicode(ex))
+                    self.logger.error(u'The Error was :'+str(ex))
                     if self.debugexceptions:
                         self.logger.exception(u'Caught Exception:')
             else:
-                self.logger.exception(u'An unhandled Caught exception was caught here from SendiMsgPicture:'+unicode(ex))
+                self.logger.exception(u'An unhandled Caught exception was caught here from SendiMsgPicture:'+str(ex))
 
         return
 #########
@@ -1445,7 +1445,7 @@ class Plugin(indigo.PluginBase):
 
 
         self.logger.debug('%s %s %s', meth, full_url, params)
-        self.logger.debug(u'Using Access_token:'+unicode(access_token))
+        self.logger.debug(u'Using Access_token:'+str(access_token))
 
         headers = {
             'authorization': 'Bearer ' + access_token,
@@ -1462,14 +1462,14 @@ class Plugin(indigo.PluginBase):
             **kwargs
         )
         if rsp.status_code > 200:
-            self.logger.error(u'Wit responded with status: ' + unicode(rsp.status_code) +
-                           ' (' + unicode(rsp.reason)  + ')')
+            self.logger.error(u'Wit responded with status: ' + str(rsp.status_code) +
+                           ' (' + str(rsp.reason)  + ')')
         json = rsp.json()
 
         if 'error' in json:
-            self.logger.error(u'Wit responded with an error: ' + unicode(json['error']))
+            self.logger.error(u'Wit responded with an error: ' + str(json['error']))
 
-        self.logger.debug('%s %s %s', unicode(meth), unicode(full_url), unicode(json))
+        self.logger.debug('%s %s %s', str(meth), str(full_url), str(json))
         return json
 
     def witReqSpeech(self, access_token, meth, path, params,  **kwargs):
@@ -1493,8 +1493,8 @@ class Plugin(indigo.PluginBase):
             **kwargs
         )
         if rsp.status_code > 200:
-            self.logger.error(u'Wit responded with status: ' + unicode(rsp.status_code) +
-                           ' (' + unicode(rsp.reason)  + ')')
+            self.logger.error(u'Wit responded with status: ' + str(rsp.status_code) +
+                           ' (' + str(rsp.reason)  + ')')
         json = rsp.json()
 
         if 'error' in json:
@@ -1516,7 +1516,7 @@ class Plugin(indigo.PluginBase):
 
         resp = self.witReq(self.access_token, 'GET', '/message', params, '')
         self.logger.debug(u'Acess_Token Used:'+self.access_token)
-        self.logger.debug(u'wit_message: '+unicode(resp))
+        self.logger.debug(u'wit_message: '+str(resp))
         return resp
 
 
@@ -1538,7 +1538,7 @@ class Plugin(indigo.PluginBase):
         resp = self.witReqSpeech(self.access_token, 'POST', '/speech', params,
                    data=audio_file, headers=headers)
         self.logger.debug(u'Acess_Token Used:'+self.access_token)
-        self.logger.debug(u'wit_speech: '+unicode(resp))
+        self.logger.debug(u'wit_speech: '+str(resp))
 
         return resp
 
@@ -1569,14 +1569,14 @@ class Plugin(indigo.PluginBase):
         try:
             self.main_access_token = self.pluginPrefs.get('main_access_token','')
 
-            self.logger.debug(u'self.main_access_token equals:' + unicode(self.main_access_token))
+            self.logger.debug(u'self.main_access_token equals:' + str(self.main_access_token))
 
             if self.main_access_token == '':
                 self.access_token = self.pluginPrefs.get('access_token','')
             else:
                 self.access_token = self.main_access_token
 
-            self.logger.debug(u'self.access_token equals:' + unicode(self.access_token))
+            self.logger.debug(u'self.access_token equals:' + str(self.access_token))
 
             checkappexists = self.wit_getappid(self.access_token)
 
@@ -1588,7 +1588,7 @@ class Plugin(indigo.PluginBase):
             else:
 
                 delete_app = self.wit_deleteapp(self.access_token)
-                self.logger.debug(unicode(delete_app))
+                self.logger.debug(str(delete_app))
                 if delete_app:
                     self.configInfo='delsuccess'
                 else:
@@ -1607,7 +1607,7 @@ class Plugin(indigo.PluginBase):
             self.pluginPrefs['app_id']= ''
             self.savePluginPrefs()
             self.logger.debug(u'---- Saved PluginPrefs ------')
-            self.logger.debug(unicode(self.pluginPrefs))
+            self.logger.debug(str(self.pluginPrefs))
             self.main_access_token = ''
             self.access_token = ''
             if self.debugexceptions:
@@ -1647,15 +1647,15 @@ class Plugin(indigo.PluginBase):
                         description = str(device.description)
                         if description != '' and description.startswith('witai'):
                             # okay - just grab the first line
-                            # self.logger.debug(u'Description: String result found:'+unicode(description))
+                            # self.logger.debug(u'Description: String result found:'+str(description))
                             description = description.split('\n', 1)[0]
                             # firstline, now remove witai
-                            # self.logger.debug(u'Description: First Line only:'+unicode(description))
+                            # self.logger.debug(u'Description: First Line only:'+str(description))
                             description = description[6:]
-                            # self.logger.debug(u'Description: New Description equals:'+unicode(description))
+                            # self.logger.debug(u'Description: New Description equals:'+str(description))
                             # now break up by seperating on | characters
                             synomynarray = description.split('|')
-                            # self.logger.debug(u'Description: Array now equals:'+unicode(synomynarray))
+                            # self.logger.debug(u'Description: Array now equals:'+str(synomynarray))
 
                         devicename = str(device.name)
                         array2 = array2 + '''{"value":"''' + devicename + '''","expressions":["''' + devicename + '''",'''
@@ -1671,15 +1671,15 @@ class Plugin(indigo.PluginBase):
                         description = str(device.description)
                         if description != '' and description.startswith('witai'):
                             # okay - just grab the first line
-                            # self.logger.debug(u'Description: String result found:' + unicode(description))
+                            # self.logger.debug(u'Description: String result found:' + str(description))
                             description = description.split('\n', 1)[0]
                             # firstline, now remove witai
-                            # self.logger.debug(u'Description: First Line only:' + unicode(description))
+                            # self.logger.debug(u'Description: First Line only:' + str(description))
                             description = description[6:]
-                            # self.logger.debug(u'Description: New Description equals:' + unicode(description))
+                            # self.logger.debug(u'Description: New Description equals:' + str(description))
                             # now break up by seperating on | characters
                             synomynarray = description.split('|')
-                            # .logger.debug(u'Description: Array now equals:' + unicode(synomynarray))
+                            # .logger.debug(u'Description: Array now equals:' + str(synomynarray))
 
                             devicename = str(device.name)
                             array2 = array2 + '''{"value":"''' + devicename + '''","expressions":["''' + devicename + '''",'''
@@ -1693,12 +1693,12 @@ class Plugin(indigo.PluginBase):
 
             array2 = array2[:-1] + ']}'
             # array2 = json.dumps(array2)
-            self.logger.debug(unicode(array2))
+            self.logger.debug(str(array2))
 
             params = {}
             params['v'] = '20181110'
             entityput = self.witReq(self.access_token, 'PUT', '/entities/device_name', params, array2)
-            self.logger.debug(unicode(entityput))
+            self.logger.debug(str(entityput))
             t.sleep(10)
             x=0
             base = []
@@ -1755,16 +1755,16 @@ class Plugin(indigo.PluginBase):
                 if x > 170:
                     jsonbase = json.dumps(base)
                     replyend = self.witReq(self.access_token, 'POST', '/samples', '', jsonbase)
-                    self.logger.debug(unicode(jsonbase))
-                    self.logger.debug(unicode(replyend))
+                    self.logger.debug(str(jsonbase))
+                    self.logger.debug(str(replyend))
                     x = 0
                     del base[:]
                     self.sleep(71)
 
             jsonbase = json.dumps(base)
             replyend = self.witReq(self.access_token, 'POST', '/samples', '', jsonbase)
-            self.logger.debug(unicode(jsonbase))
-            self.logger.debug(unicode(replyend))
+            self.logger.debug(str(jsonbase))
+            self.logger.debug(str(replyend))
             x = 0
             del base[:]
             self.sleep(71)
@@ -1791,8 +1791,8 @@ class Plugin(indigo.PluginBase):
 
             jsonbase = json.dumps(base)
             replyend = self.witReq(self.access_token, 'POST', '/samples', '', jsonbase)
-            self.logger.debug(unicode(jsonbase))
-            self.logger.debug(unicode(replyend))
+            self.logger.debug(str(jsonbase))
+            self.logger.debug(str(replyend))
             x = 0
             del base[:]
             t.sleep(10)
@@ -1807,8 +1807,8 @@ class Plugin(indigo.PluginBase):
 
             jsonbase = json.dumps(base)
             replyend = self.witReq(self.access_token, 'POST', '/samples', '', jsonbase)
-            self.logger.debug(unicode(jsonbase))
-            self.logger.debug(unicode(replyend))
+            self.logger.debug(str(jsonbase))
+            self.logger.debug(str(replyend))
             x = 0
             del base[:]
             t.sleep(10)
@@ -1826,8 +1826,8 @@ class Plugin(indigo.PluginBase):
 
             jsonbase = json.dumps(base)
             replyend = self.witReq(self.access_token, 'POST', '/samples', '', jsonbase)
-            self.logger.debug(unicode(jsonbase))
-            self.logger.debug(unicode(replyend))
+            self.logger.debug(str(jsonbase))
+            self.logger.debug(str(replyend))
             x = 0
             del base[:]
             t.sleep(10)
@@ -1848,8 +1848,8 @@ class Plugin(indigo.PluginBase):
 
             jsonbase = json.dumps(base)
             replyend = self.witReq(self.access_token, 'POST', '/samples', '', jsonbase)
-            self.logger.debug(unicode(jsonbase))
-            self.logger.debug(unicode(replyend))
+            self.logger.debug(str(jsonbase))
+            self.logger.debug(str(replyend))
             x = 0
             del base[:]
 
@@ -1867,8 +1867,8 @@ class Plugin(indigo.PluginBase):
             base.append(json.loads(array))
             jsonbase = json.dumps(base)
             replyend = self.witReq(self.access_token, 'POST', '/samples', '', jsonbase)
-            self.logger.debug(unicode(jsonbase))
-            self.logger.debug(unicode(replyend))
+            self.logger.debug(str(jsonbase))
+            self.logger.debug(str(replyend))
             self.logger.info(u'Imessage Plugin:  wit.Ai Device successfully updated.')
             self.configInfo = 'upComplete'
         except:
@@ -1912,7 +1912,7 @@ class Plugin(indigo.PluginBase):
         params = {}
         params['v'] = '20170307'
         entityput = self.witReq(self.access_token, 'PUT', '/entities/device_name', params, lookup)
-        self.logger.debug(unicode(entityput))
+        self.logger.debug(str(entityput))
         t.sleep(15)
 
         array2 = '''{"doc":"Indigo device_name","lookups":["free-text","keywords"],"values":['''
@@ -1926,15 +1926,15 @@ class Plugin(indigo.PluginBase):
                     description = str(device.description)
                     if description != '' and description.startswith('witai'):
                         # okay - just grab the first line
-                        #self.logger.debug(u'Description: String result found:'+unicode(description))
+                        #self.logger.debug(u'Description: String result found:'+str(description))
                         description = description.split('\n',1)[0]
                         # firstline, now remove witai
-                        #self.logger.debug(u'Description: First Line only:'+unicode(description))
+                        #self.logger.debug(u'Description: First Line only:'+str(description))
                         description = description[6:]
-                        #self.logger.debug(u'Description: New Description equals:'+unicode(description))
+                        #self.logger.debug(u'Description: New Description equals:'+str(description))
                         # now break up by seperating on | characters
                         synomynarray = description.split('|')
-                        #self.logger.debug(u'Description: Array now equals:'+unicode(synomynarray))
+                        #self.logger.debug(u'Description: Array now equals:'+str(synomynarray))
 
                     devicename = str(device.name)
                     array2 = array2 + '''{"value":"'''+devicename+'''","expressions":["'''+devicename+'''",'''
@@ -1949,15 +1949,15 @@ class Plugin(indigo.PluginBase):
                     description = str(device.description)
                     if description != '' and description.startswith('witai'):
                         # okay - just grab the first line
-                        #self.logger.debug(u'Description: String result found:' + unicode(description))
+                        #self.logger.debug(u'Description: String result found:' + str(description))
                         description = description.split('\n', 1)[0]
                         # firstline, now remove witai
-                        #self.logger.debug(u'Description: First Line only:' + unicode(description))
+                        #self.logger.debug(u'Description: First Line only:' + str(description))
                         description = description[6:]
-                        #self.logger.debug(u'Description: New Description equals:' + unicode(description))
+                        #self.logger.debug(u'Description: New Description equals:' + str(description))
                         # now break up by seperating on | characters
                         synomynarray = description.split('|')
-                        #.logger.debug(u'Description: Array now equals:' + unicode(synomynarray))
+                        #.logger.debug(u'Description: Array now equals:' + str(synomynarray))
 
                         devicename = str(device.name)
                         array2 = array2 + '''{"value":"''' + devicename + '''","expressions":["''' + devicename + '''",'''
@@ -1972,12 +1972,12 @@ class Plugin(indigo.PluginBase):
 
         array2 = array2[:-1] + ']}'
         #array2 = json.dumps(array2)
-        self.logger.debug(unicode(array2))
+        self.logger.debug(str(array2))
 
         params = {}
         params['v'] = '20181110'
         entityput = self.witReq(self.access_token, 'PUT', '/entities/device_name', params, array2)
-        self.logger.debug(unicode(entityput))
+        self.logger.debug(str(entityput))
 
 
         t.sleep(10)
@@ -2043,8 +2043,8 @@ class Plugin(indigo.PluginBase):
                     if x > 185:
                         jsonbase = json.dumps(base)
                         replyend = self.witReq(self.access_token, 'POST', '/samples', '', jsonbase)
-                        self.logger.debug(unicode(jsonbase))
-                        self.logger.debug(unicode(replyend))
+                        self.logger.debug(str(jsonbase))
+                        self.logger.debug(str(replyend))
                         x = 0
                         del base[:]
                         self.sleep(71)
@@ -2103,8 +2103,8 @@ class Plugin(indigo.PluginBase):
                 if x > 185:
                     jsonbase = json.dumps(base)
                     replyend = self.witReq(self.access_token, 'POST', '/samples', '', jsonbase)
-                    self.logger.debug(unicode(jsonbase))
-                    self.logger.debug(unicode(replyend))
+                    self.logger.debug(str(jsonbase))
+                    self.logger.debug(str(replyend))
                     x = 0
                     del base[:]
                     self.sleep(71)
@@ -2112,8 +2112,8 @@ class Plugin(indigo.PluginBase):
         # and load again at end in case never make it to 195 samples
         jsonbase = json.dumps(base)
         replyend = self.witReq(self.access_token, 'POST', '/samples', '', jsonbase)
-        self.logger.debug(unicode(jsonbase))
-        self.logger.debug(unicode(replyend))
+        self.logger.debug(str(jsonbase))
+        self.logger.debug(str(replyend))
         x = 0
         del base[:]
         self.sleep(71)
@@ -2128,8 +2128,8 @@ class Plugin(indigo.PluginBase):
 
         jsonbase = json.dumps(base)
         replyend = self.witReq(self.access_token, 'POST', '/samples', '', jsonbase)
-        self.logger.debug(unicode(jsonbase))
-        self.logger.debug(unicode(replyend))
+        self.logger.debug(str(jsonbase))
+        self.logger.debug(str(replyend))
         x = 0
         del base[:]
         self.sleep(15)
@@ -2145,8 +2145,8 @@ class Plugin(indigo.PluginBase):
 
         jsonbase = json.dumps(base)
         replyend = self.witReq(self.access_token, 'POST', '/samples', '', jsonbase)
-        self.logger.debug(unicode(jsonbase))
-        self.logger.debug(unicode(replyend))
+        self.logger.debug(str(jsonbase))
+        self.logger.debug(str(replyend))
         x = 0
         del base[:]
         self.sleep(15)
@@ -2160,8 +2160,8 @@ class Plugin(indigo.PluginBase):
 
         jsonbase = json.dumps(base)
         replyend = self.witReq(self.access_token, 'POST', '/samples', '', jsonbase)
-        self.logger.debug(unicode(jsonbase))
-        self.logger.debug(unicode(replyend))
+        self.logger.debug(str(jsonbase))
+        self.logger.debug(str(replyend))
         x = 0
         del base[:]
         self.sleep(15)
@@ -2179,8 +2179,8 @@ class Plugin(indigo.PluginBase):
 
         jsonbase = json.dumps(base)
         replyend = self.witReq(self.access_token, 'POST', '/samples', '', jsonbase)
-        self.logger.debug(unicode(jsonbase))
-        self.logger.debug(unicode(replyend))
+        self.logger.debug(str(jsonbase))
+        self.logger.debug(str(replyend))
         x = 0
         del base[:]
         self.sleep(15)
@@ -2200,8 +2200,8 @@ class Plugin(indigo.PluginBase):
 
         jsonbase = json.dumps(base)
         replyend = self.witReq(self.access_token, 'POST', '/samples', '', jsonbase)
-        self.logger.debug(unicode(jsonbase))
-        self.logger.debug(unicode(replyend))
+        self.logger.debug(str(jsonbase))
+        self.logger.debug(str(replyend))
         x = 0
         del base[:]
 
@@ -2215,7 +2215,7 @@ class Plugin(indigo.PluginBase):
         params = {}
         params['v'] = '20181110'
         deletenewapp = self.witReq(access_token, 'DELETE','/apps/'+self.app_id, params, '')
-        self.logger.debug(u'Reply Delete App:'+unicode(deletenewapp))
+        self.logger.debug(u'Reply Delete App:'+str(deletenewapp))
         #reply_dict = json.loads(createnewapp)
         if deletenewapp.get('success')==True:
             self.logger.info(u'Wit.Ai Indigo-iMessage App Deleted')
@@ -2238,7 +2238,7 @@ class Plugin(indigo.PluginBase):
         array = '''{"name":"''' + nameofapp +'''", "lang":"en","private":"false"}'''
 
         createnewapp = self.witReq(access_token, 'POST','/apps',params, array)
-        self.logger.debug(u'Reply Create App:'+unicode(createnewapp))
+        self.logger.debug(u'Reply Create App:'+str(createnewapp))
 
         #reply_dict = json.loads(createnewapp)
 
@@ -2250,9 +2250,9 @@ class Plugin(indigo.PluginBase):
         self.pluginPrefs['app_id']= self.app_id
         self.savePluginPrefs()
         self.logger.debug(u'---- Saved PluginPrefs ------')
-        self.logger.debug(unicode(self.pluginPrefs))
+        self.logger.debug(str(self.pluginPrefs))
 
-        self.logger.error(u'New Access Token Equals:'+unicode(self.access_token))
+        self.logger.error(u'New Access Token Equals:'+str(self.access_token))
         return createnewapp.get('access_token')
 
     def wit_getappid(self, access_token):
@@ -2272,7 +2272,7 @@ class Plugin(indigo.PluginBase):
         params['limit'] = '100'
         #array = '''{"name":"Indigo-iMessage", "lang":"en","private":"true"}'''
         getapp = self.witReq(access_token, 'GET','/apps',params, '')
-        self.logger.debug(u'Get Apps:'+unicode(getapp))
+        self.logger.debug(u'Get Apps:'+str(getapp))
 
         for i in getapp:
             if i['name']== self.username+'-Indigo-iMessage':
@@ -2282,7 +2282,7 @@ class Plugin(indigo.PluginBase):
                 self.pluginPrefs['app_id']=self.app_id
                 self.savePluginPrefs()
                 self.logger.debug(u'---- Saved PluginPrefs ------')
-                self.logger.debug(unicode(self.pluginPrefs))
+                self.logger.debug(str(self.pluginPrefs))
                 return True
 
 
@@ -2295,9 +2295,9 @@ class Plugin(indigo.PluginBase):
         params = {}
         params['v'] = '20181110'
         array = '''{"doc":"Indigo '''+entity+'''", "id":"'''+entity+'''"}'''
-        self.logger.debug(u'New Entity Created:'+unicode(array))
+        self.logger.debug(u'New Entity Created:'+str(array))
         createnewentity = self.witReq(access_token, 'POST','/entities', params, array)
-        self.logger.debug(u'Reply Create Entity:' + unicode(createnewentity))
+        self.logger.debug(u'Reply Create Entity:' + str(createnewentity))
         return
 
     def wit_deleteentity(self, access_token, entity):
@@ -2306,9 +2306,9 @@ class Plugin(indigo.PluginBase):
         params = {}
         params['v'] = '20181110'
         #array = '''{"doc":"Indigo Device Name", "id":"device_name"}'''
-        self.logger.debug(u'New Entity Deleted:'+unicode(entity))
+        self.logger.debug(u'New Entity Deleted:'+str(entity))
         deletenewentity = self.witReq(access_token, 'DELETE','/entities/'+entity, params, '')
-        self.logger.debug(u'Reply Delete Entity:' + unicode(deletenewentity))
+        self.logger.debug(u'Reply Delete Entity:' + str(deletenewentity))
         return
 
 ##########################
@@ -2325,7 +2325,7 @@ class Plugin(indigo.PluginBase):
         self.logger.info(u"{0:<30} {1}".format("Last Buddy:", self.lastBuddy))
         self.logger.info(u"{0:<30} {1}".format("Last Command Sent:", self.lastCommandsent))
         if self.triggers:
-            for triggerId, trigger in sorted(self.triggers.iteritems()):
+            for triggerId, trigger in sorted(self.triggers.items()):
                 self.logger.info(u"{0:<30} {1}".format("Triggers:", trigger.pluginTypeId +'  :  '+ trigger.name))
         self.logger.info(u"{0:<30} {1}".format("Awaiting Confirmation:", self.awaitingConfirmation))
         self.logger.info(u"{0:<30} {1}".format("Reset Last Command:", self.resetLastCommand))
@@ -2358,7 +2358,7 @@ class Plugin(indigo.PluginBase):
 
     def triggerCheck(self, buddy,  triggertype, imsgcmdreceived):
         if self.debugtriggers:
-            self.logger.debug('triggerCheck run.  triggertype:'+unicode(triggertype))
+            self.logger.debug('triggerCheck run.  triggertype:'+str(triggertype))
 
         Triggered = False
 
@@ -2367,17 +2367,17 @@ class Plugin(indigo.PluginBase):
             self.logger.debug(u'Removed extra characters from cmd received:'+imsgcmdreceived)
 
         try:
-            for triggerId, trigger in sorted(self.triggers.iteritems()):
+            for triggerId, trigger in sorted(self.triggers.items()):
                 if self.debugtriggers:
                     self.logger.debug("Checking Trigger:  %s (%s), Type: %s,  and event : %s" % (trigger.name, trigger.id, trigger.pluginTypeId,  triggertype))
                 anyStringcheck = trigger.pluginProps.get('anyStringcheck', False)
                 if self.debugtriggers:
                     self.logger.debug("Trigger : %s, has any text Containing = %s" % (trigger.name, anyStringcheck))
 
-                #self.logger.error(unicode(trigger))
+                #self.logger.error(str(trigger))
                 if trigger.pluginTypeId == "commandReceived" and triggertype =='commandReceived':
                     if self.debugtriggers:
-                        self.logger.debug(u'Trigger PluginProps: CommandCalled:'+unicode(trigger.pluginProps['commandCalled']))
+                        self.logger.debug(u'Trigger PluginProps: CommandCalled:'+str(trigger.pluginProps['commandCalled']))
                     if anyStringcheck==False:
                         if trigger.pluginProps['commandCalled'] == (str(imsgcmdreceived).lower()):
                             if self.debugtriggers:
@@ -2393,17 +2393,17 @@ class Plugin(indigo.PluginBase):
 
                 if trigger.pluginTypeId == "specificBuddycommandReceived" and triggertype == 'commandReceived':
                     if self.debugtriggers:
-                        self.logger.debug(u'Trigger PluginProps: Specific CommandCalled:'+unicode(trigger.pluginProps['commandCalled']))
+                        self.logger.debug(u'Trigger PluginProps: Specific CommandCalled:'+str(trigger.pluginProps['commandCalled']))
                     if anyStringcheck==False:
                         if buddy in trigger.pluginProps['buddyId'] and trigger.pluginProps['commandCalled'] == (str(imsgcmdreceived).lower()):  # checking buddy in list of options
                             if self.debugtriggers:
-                                self.logger.debug(u'Buddy Found:'+unicode(buddy)+' and Buddy in allowed list for trigger:'+unicode(trigger.pluginProps['buddyId'])+' Specific Command Called:' + unicode(trigger.pluginProps['commandCalled']))
+                                self.logger.debug(u'Buddy Found:'+str(buddy)+' and Buddy in allowed list for trigger:'+str(trigger.pluginProps['buddyId'])+' Specific Command Called:' + str(trigger.pluginProps['commandCalled']))
                             indigo.trigger.execute(trigger)
                             Triggered = True
                     else:
                         if buddy in trigger.pluginProps['buddyId'] and trigger.pluginProps['commandCalled'] in (str(imsgcmdreceived).lower()):  # checking buddy in list of options
                             if self.debugtriggers:
-                                self.logger.debug(u'Buddy Found:'+unicode(buddy)+' and Buddy in allowed list for trigger:'+unicode(trigger.pluginProps['buddyId'])+' Specific Command Called:' + unicode(trigger.pluginProps['commandCalled'])+ u' and text containing is True')
+                                self.logger.debug(u'Buddy Found:'+str(buddy)+' and Buddy in allowed list for trigger:'+str(trigger.pluginProps['buddyId'])+' Specific Command Called:' + str(trigger.pluginProps['commandCalled'])+ u' and text containing is True')
                             indigo.trigger.execute(trigger)
                             Triggered = True
 
