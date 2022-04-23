@@ -149,24 +149,20 @@ class Plugin(indigo.PluginBase):
                 self.logger.exception(u'and the Caught Exception is:')
             pass
 
-
         if self.app_id !='' and self.use_witAi and self.main_access_token !='':
             self.logger.info(u'Running update wit.ai Device naming and further Sample data for Wit.Ai Online App now')
-
             try:
-
                 valuesDict = {}
                 self.wit_ThreadUpdateApp(valuesDict)
-
             except:
                 self.logger.info(u'Error updating new devices...')
                 if self.debugexceptions:
                     self.logger.exception(u'and caught exception:')
                 return
 
-            self.pluginPrefs['loadedPluginVersion'] = newVersion
-            self.logger.info(u'Completing plugin updating/installation for ' + newVersion)
-            return
+        self.pluginPrefs['loadedPluginVersion'] = newVersion
+        self.logger.info(u'Completing plugin updating/installation for ' + newVersion)
+        return
 
 
 
@@ -1257,7 +1253,7 @@ class Plugin(indigo.PluginBase):
 
         except Exception as ex:
             errortype = type(ex).__name__
-            self.logger.debug(u'A error of type :'+str(errortype)+' occured.  The longer message is :'+str(ex.message))
+            self.logger.debug(u'A error of type :'+str(errortype)+' occured.  The longer message is :'+str(ex))
             if errortype == 'ScriptError':
                 if "Can?t get buddy id" in str(ex):
                     self.logger.error(u'An error occured sending to buddy Handle:  '+str(buddyHandle))
@@ -1298,7 +1294,7 @@ class Plugin(indigo.PluginBase):
         except Exception as ex:
             errortype = type(ex).__name__
             self.logger.debug(
-                u'A error of type :' + str(errortype) + ' occured.  The longer message is :' + str(ex.message))
+                u'A error of type :' + str(errortype) + ' occured.  The longer message is :' + str(ex))
             if errortype == 'ScriptError':
                 if "Can?t get buddy id" in str(ex):
                     self.logger.error(u'An error occured sending to buddy Handle:  ' + str(buddyHandle))
