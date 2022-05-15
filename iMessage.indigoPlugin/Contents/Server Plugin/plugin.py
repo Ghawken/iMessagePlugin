@@ -90,7 +90,8 @@ class Plugin(indigo.PluginBase):
         self.messages = []
 
         MAChome = os.path.expanduser("~") + "/"
-        folderLocation = MAChome + "Documents/Indigo-iMessagePlugin/"
+        folderLocation = MAChome + "Pictures/Indigo-iMessagePlugin/"  ## change to Pictures as Documents locked down and iMessage AZpp can't access
+
         self.saveDirectory = folderLocation
         self.backupfilename = os.path.expanduser('~/Documents/Indigo-iMsgBackup/')
         self.logger.debug(u'Self.SaveDirectory equals:'+str(self.saveDirectory))
@@ -1629,7 +1630,10 @@ class Plugin(indigo.PluginBase):
                 self.logger.info(u'wit.Ai Application does not seem to exist.  Press Create first before updating')
                 return
 
-            array2 = '''{"doc":"Indigo device_name","lookups":["free-text","keywords"],"values":['''
+            self.wit_createentity(self.access_token,"device_name")
+            self.wit_createintent(self.access_token,"device_status")
+
+            array2 = '''{"roles":["device_name"],"lookups":["free-text","keywords"],"keywords":['''
             # array2 = '''{"values":['''
             x = 0
             synomynarray = []
@@ -1654,7 +1658,7 @@ class Plugin(indigo.PluginBase):
                             # self.logger.debug(u'Description: Array now equals:'+str(synomynarray))
 
                         devicename = str(device.name)
-                        array2 = array2 + '''{"value":"''' + devicename + '''","expressions":["''' + devicename + '''",'''
+                        array2 = array2 + '''{"keyword":"''' + devicename + '''","synonyms":["''' + devicename + '''",'''
                         if synomynarray:  # not empty
                             for synomyn in synomynarray:
                                 array2 = array2 + '''"''' + synomyn + '''",'''
@@ -1678,7 +1682,7 @@ class Plugin(indigo.PluginBase):
                             # .logger.debug(u'Description: Array now equals:' + str(synomynarray))
 
                             devicename = str(device.name)
-                            array2 = array2 + '''{"value":"''' + devicename + '''","expressions":["''' + devicename + '''",'''
+                            array2 = array2 + '''{"keyword":"''' + devicename + '''","synonyms":["''' + devicename + '''",'''
                             if synomynarray:  # not empty
                                 for synomyn in synomynarray:
                                     array2 = array2 + '''"''' + synomyn + '''",'''
@@ -1693,7 +1697,8 @@ class Plugin(indigo.PluginBase):
 
             params = {}
             params['v'] = '20181110'
-            entityput = self.witReq(self.access_token, 'PUT', '/entities/device_name', params, array2)
+            self.logger.debug("{}".format(array2))
+            entityput = self.witReq(self.access_token, 'PUT', '/entities/device_name',params, array2)
             self.logger.debug(str(entityput))
             t.sleep(10)
             x=0
@@ -1704,53 +1709,32 @@ class Plugin(indigo.PluginBase):
                     if self.wit_alldevices:
                         self.logger.debug(u'Okay - sending all device details to help with parsing...')
                         if hasattr(device, "displayStateValRaw") and device.displayStateValRaw in ['0',False,True]:
-                            x=x+8
                             devicename = str(device.name)
-                            array = '''{"text":"What is the status of '''+ devicename +'''","entities":[{"entity":"intent","value":"device_status"},{"entity":"device_name","value":"'''+devicename+'''"}]}'''
-                            base.append(json.loads(array))
-                            array = '''{"text":"What is the state of '''+ devicename +'''","entities":[{"entity":"intent","value":"device_status"},{"entity":"device_name","value":"'''+devicename+'''"}]}'''
-                            base.append(json.loads(array))
-                            array = '''{"text":"Is the '''+ devicename +''' off? ","entities":[{"entity":"intent","value":"device_status"},{"entity":"device_name","value":"'''+devicename+'''"}]}'''
-                            base.append(json.loads(array))
-                            array = '''{"text":"Is the '''+ devicename +''' Open? ","entities":[{"entity":"intent","value":"device_status"},{"entity":"device_name","value":"'''+devicename+'''"}]}'''
-                            base.append(json.loads(array))
-                            array = '''{"text":"Is the '''+ devicename +''' Closed? ","entities":[{"entity":"intent","value":"device_status"},{"entity":"device_name","value":"'''+devicename+'''"}]}'''
-                            base.append(json.loads(array))
-                            array = '''{"text":"Is the '''+ devicename +''' On? ","entities":[{"entity":"intent","value":"device_status"},{"entity":"device_name","value":"'''+devicename+'''"}]}'''
-                            base.append(json.loads(array))
-                            array = '''{"text":"Can you tell me whether ''' + devicename + ''' is on? ","entities":[{"entity":"intent","value":"device_status},{"entity":"device_name","value":"''' + devicename + '''"}]}'''
-                            base.append(json.loads(array))
-                            array = '''{"text":"Can you tell me whether ''' + devicename + ''' is off? ","entities":[{"entity":"intent","value":"device_status},{"entity":"device_name","value":"''' + devicename + '''"}]}'''
-                            base.append(json.loads(array))
+                            statements = ["What is the status of {}","What is the state of {}","Is the {} off?", "Is the {} Open?", "Is {} Closed", "Is {} Open?","Can you tell me whether {} is on?","Can you tell me whether {} is off?" ]
+                            x =x + len(statements)
+                            for statement in statements:
+                                start = statement.find("{}")  # start position of device name
+                                end = start + len(devicename)  ## end adds - no checks here...
+                                text = statement.format(devicename)  ## add device name to array, then add rest.
+                                array = '''{"text":"'''+str(text)+'''","intent":"device_status","entities":[{"entity":"device_name:device_name","body":"''' + devicename + '''", "start":'''+str(start)+''',"end":'''+str(end)+''',"entities":[]}], "traits":[]}'''
+                                base.append(json.loads(array))
                     else:
                         description = str(device.description)
                         if description != '' and description.startswith('witai'):
-                            x=x+10
                             devicename = str(device.name)
-                            array = '''{"text":"What is the status of '''+ devicename +'''","entities":[{"entity":"intent","value":"device_status"},{"entity":"device_name","value":"'''+devicename+'''"}]}'''
-                            base.append(json.loads(array))
-                            array = '''{"text":"What is the state of '''+ devicename +'''","entities":[{"entity":"intent","value":"device_status"},{"entity":"device_name","value":"'''+devicename+'''"}]}'''
-                            base.append(json.loads(array))
-                            array = '''{"text":"What is the current status of '''+ devicename +'''","entities":[{"entity":"intent","value":"device_status"},{"entity":"device_name","value":"'''+devicename+'''"}]}'''
-                            base.append(json.loads(array))
-                            array = '''{"text":"What is the current state of '''+ devicename +'''","entities":[{"entity":"intent","value":"device_status"},{"entity":"device_name","value":"'''+devicename+'''"}]}'''
-                            base.append(json.loads(array))
-                            array = '''{"text":"Is the '''+ devicename +''' off? ","entities":[{"entity":"intent","value":"device_status"},{"entity":"device_name","value":"'''+devicename+'''"}]}'''
-                            base.append(json.loads(array))
-                            array = '''{"text":"Is the '''+ devicename +''' Open? ","entities":[{"entity":"intent","value":"device_status"},{"entity":"device_name","value":"'''+devicename+'''"}]}'''
-                            base.append(json.loads(array))
-                            array = '''{"text":"Is the '''+ devicename +''' Closed? ","entities":[{"entity":"intent","value":"device_status"},{"entity":"device_name","value":"'''+devicename+'''"}]}'''
-                            base.append(json.loads(array))
-                            array = '''{"text":"Is the '''+ devicename +''' On? ","entities":[{"entity":"intent","value":"device_status"},{"entity":"device_name","value":"'''+devicename+'''"}]}'''
-                            base.append(json.loads(array))
-                            array = '''{"text":"Can you tell me whether ''' + devicename + ''' is on? ","entities":[{"entity":"intent","value":"device_status"},{"entity":"device_name","value":"''' + devicename + '''"}]}'''
-                            base.append(json.loads(array))
-                            array = '''{"text":"Can you tell me whether ''' + devicename + ''' is off? ","entities":[{"entity":"intent","value":"device_status"},{"entity":"device_name","value":"''' + devicename + '''"}]}'''
-                            base.append(json.loads(array))
+                            statements = ["What is the status of {}","What is the current status of {}","What is the current state of {}","What is the state of {}","Is the {} off?", "Is the {} Open?", "Is {} Closed", "Is {} Open?","Can you tell me whether {} is on?","Can you tell me whether {} is off?" ]
+                            x =x + len(statements)
+                            for statement in statements:
+                                start = statement.find("{}")  # start position of device name
+                                end = start + len(devicename)  ## end adds - no checks here...
+                                text = statement.format(devicename)  ## add device name to array, then add rest.
+                                array = '''{"text":"'''+str(text)+'''","intent":"device_status","entities":[{"entity":"device_name:device_name","body":"''' + devicename + '''", "start":'''+str(start)+''',"end":'''+str(end)+''',"entities":[] }], "traits":[] }'''
+                                self.logger.debug(array)
+                                base.append(json.loads(array))
 
-                if x > 170:
+                if x > 80:
                     jsonbase = json.dumps(base)
-                    replyend = self.witReq(self.access_token, 'POST', '/samples', '', jsonbase)
+                    replyend = self.witReq(self.access_token, 'POST', '//utterances', '', jsonbase)
                     self.logger.debug(str(jsonbase))
                     self.logger.debug(str(replyend))
                     x = 0
@@ -1758,7 +1742,7 @@ class Plugin(indigo.PluginBase):
                     self.sleep(71)
 
             jsonbase = json.dumps(base)
-            replyend = self.witReq(self.access_token, 'POST', '/samples', '', jsonbase)
+            replyend = self.witReq(self.access_token, 'POST', '/utterances', '', jsonbase)
             self.logger.debug(str(jsonbase))
             self.logger.debug(str(replyend))
             x = 0
@@ -1770,23 +1754,23 @@ class Plugin(indigo.PluginBase):
             ## Probably pay to run this on first startup....
 
 
-            array = '''{"text":"Tell me a joke","entities":[{"entity":"intent","value":"joke"}]}'''
+            array = '''{"text":"Tell me a joke","intent":"joke","entities":[], "traits":[]}'''
             base.append(json.loads(array))
-            array = '''{"text":"Do you know any good jokes?","entities":[{"entity":"intent","value":"joke"}]}'''
+            array = '''{"text":"Do you know any good jokes?","intent":"joke","entities":[], "traits":[]}'''
             base.append(json.loads(array))
-            array = '''{"text":"Please tell me a funny joke?","entities":[{"entity":"intent","value":"joke"}]}'''
+            array = '''{"text":"Please tell me a funny joke?","intent":"joke","entities":[], "traits":[]}'''
             base.append(json.loads(array))
-            array = '''{"text":"Can you give me some advice","entities":[{"entity":"intent","value":"advice"}]}'''
+            array = '''{"text":"Can you give me some advice","intent":"advice","entities":[], "traits":[]}'''
             base.append(json.loads(array))
-            array = '''{"text":"Do you have any advice for me?","entities":[{"entity":"intent","value":"advice"}]}'''
+            array = '''{"text":"Do you have any advice for me?","intent":"advice","entities":[], "traits":[]}'''
             base.append(json.loads(array))
-            array = '''{"text":"Can you help with some advice?","entities":[{"entity":"intent","value":"advice"}]}'''
+            array = '''{"text":"Can you help with some advice?","intent":"advice","entities":[], "traits":[]}'''
             base.append(json.loads(array))
-            array = '''{"text":"What should I do?","entities":[{"entity":"intent","value":"advice"}]}'''
+            array = '''{"text":"What should I do?","intent":"advice","entities":[], "traits":[]}'''
             base.append(json.loads(array))
 
             jsonbase = json.dumps(base)
-            replyend = self.witReq(self.access_token, 'POST', '/samples', '', jsonbase)
+            replyend = self.witReq(self.access_token, 'POST', '/utterances', '', jsonbase)
             self.logger.debug(str(jsonbase))
             self.logger.debug(str(replyend))
             x = 0
@@ -1794,75 +1778,75 @@ class Plugin(indigo.PluginBase):
             t.sleep(10)
 
 
-            array = '''{"text":"Hello","entities":[{"entity":"intent","value":"greeting"}]}'''
+            array = '''{"text":"Hello","intent":"greeting","entities":[], "traits":[]}'''
             base.append(json.loads(array))
-            array = '''{"text":"Hi, how are you?","entities":[{"entity":"intent","value":"greeting"}]}'''
+            array = '''{"text":"Hi, how are you?","intent":"greeting","entities":[], "traits":[]}'''
             base.append(json.loads(array))
-            array = '''{"text":"What is up?","entities":[{"entity":"intent","value":"greeting"}]}'''
+            array = '''{"text":"What is up?","intent":"greeting","entities":[], "traits":[]}'''
             base.append(json.loads(array))
 
             jsonbase = json.dumps(base)
-            replyend = self.witReq(self.access_token, 'POST', '/samples', '', jsonbase)
+            replyend = self.witReq(self.access_token, 'POST', '/utterances', '', jsonbase)
             self.logger.debug(str(jsonbase))
             self.logger.debug(str(replyend))
             x = 0
             del base[:]
             t.sleep(10)
 
-            array = '''{"text":"Should I value you opinion?","entities":[{"entity":"intent","value":"yes_no_decision"}]}'''
+            array = '''{"text":"Should I value you opinion?","intent":"yes_no_decision","entities":[], "traits":[]}'''
             base.append(json.loads(array))
-            array = '''{"text":"Shall I or Shall I not?","entities":[{"entity":"intent","value":"yes_no_decision"}]}'''
+            array = '''{"text":"Shall I or Shall I not?","intent":"yes_no_decision","entities":[], "traits":[]}'''
             base.append(json.loads(array))
-            array = '''{"text":"Should I do it?","entities":[{"entity":"intent","value":"yes_no_decision"}]}'''
+            array = '''{"text":"Should I do it?","intent":"yes_no_decision","entities":[], "traits":[]}'''
             base.append(json.loads(array))
-            array = '''{"text":"Should I really do this?","entities":[{"entity":"intent","value":"yes_no_decision"}]}'''
+            array = '''{"text":"Should I really do this?","intent":"yes_no_decision","entities":[], "traits":[]}'''
             base.append(json.loads(array))
-            array = '''{"text":"What do you suggest? Yes or No?","entities":[{"entity":"intent","value":"yes_no_decision"}]}'''
+            array = '''{"text":"What do you suggest? Yes or No?","intent":"yes_no_decision","entities":[], "traits":[]}'''
             base.append(json.loads(array))
 
             jsonbase = json.dumps(base)
-            replyend = self.witReq(self.access_token, 'POST', '/samples', '', jsonbase)
+            replyend = self.witReq(self.access_token, 'POST', '/utterances', '', jsonbase)
             self.logger.debug(str(jsonbase))
             self.logger.debug(str(replyend))
             x = 0
             del base[:]
             t.sleep(10)
 
-            array = '''{"text":"Piss off you idiot","entities":[{"entity":"intent","value":"insult"},{"entity":"wit$sentiment","value":"negative"}]}'''
+            array = '''{"text":"Piss off you idiot","intent":"insult","entities":[], "traits":[{"trait":"wit$sentiment","value":"negative"}]}'''
             base.append(json.loads(array))
-            array = '''{"text":"Fuck off","entities":[{"entity":"intent","value":"insult"},{"entity":"wit$sentiment","value":"negative"}]}'''
+            array = '''{"text":"Fuck off","intent":"insult","entities":[], "traits":[{"trait":"wit$sentiment","value":"negative"}]}'''
             base.append(json.loads(array))
-            array = '''{"text":"Go away","entities":[{"entity":"intent","value":"insult"},{"entity":"wit$sentiment","value":"negative"}]}'''
+            array = '''{"text":"Go away","intent":"insult","entities":[], "traits":[{"trait":"wit$sentiment","value":"negative"}]}'''
             base.append(json.loads(array))
-            array = '''{"text":"Fuck you with bells on","entities":[{"entity":"intent","value":"insult"},{"entity":"wit$sentiment","value":"negative"}]}'''
+            array = '''{"text":"Fuck you with bells on","intent":"insult","entities":[], "traits":[{"trait":"wit$sentiment","value":"negative"}]}'''
             base.append(json.loads(array))
-            array = '''{"text":"You are useless!","entities":[{"entity":"intent","value":"insult"}, {"entity":"wit$sentiment","value":"negative"}]}'''
+            array = '''{"text":"You are useless!","intent":"insult","entities":[], "traits":[{"trait":"wit$sentiment","value":"negative"}]}'''
             base.append(json.loads(array))
-            array = '''{"text":"You are tosser!","entities":[{"entity":"intent","value":"insult"}, {"entity":"wit$sentiment","value":"negative"}]}'''
+            array = '''{"text":"You are tosser!","intent":"insult","entities":[], "traits":[{"trait":"wit$sentiment","value":"negative"}]}'''
             base.append(json.loads(array))
 
 
             jsonbase = json.dumps(base)
-            replyend = self.witReq(self.access_token, 'POST', '/samples', '', jsonbase)
+            replyend = self.witReq(self.access_token, 'POST', '/utterances', '', jsonbase)
             self.logger.debug(str(jsonbase))
             self.logger.debug(str(replyend))
             x = 0
             del base[:]
 
             ## send seperately
-            array = '''{"text":"Should I value you opinion?","entities":[{"entity":"intent","value":"yes_no_decision"}]}'''
+            array = '''{"text":"Should I value you opinion?","intent":"yes_no_decision","entities":[], "traits":[]}'''
             base.append(json.loads(array))
-            array = '''{"text":"Shall I or Shall I not?","entities":[{"entity":"intent","value":"yes_no_decision"}]}'''
+            array = '''{"text":"Shall I or Shall I not?","intent":"yes_no_decision","entities":[], "traits":[]}'''
             base.append(json.loads(array))
-            array = '''{"text":"Should I do it?","entities":[{"entity":"intent","value":"yes_no_decision"}]}'''
+            array = '''{"text":"Should I do it?","intent":"yes_no_decision","entities":[], "traits":[]}'''
             base.append(json.loads(array))
-            array = '''{"text":"Should I really do this?","entities":[{"entity":"intent","value":"yes_no_decision"}]}'''
+            array = '''{"text":"Should I really do this?","intent":"yes_no_decision","entities":[], "traits":[]}'''
             base.append(json.loads(array))
-            array = '''{"text":"What do you suggest? Yes or No?","entities":[{"entity":"intent","value":"yes_no_decision"}]}'''
+            array = '''{"text":"What do you suggest? Yes or No?","intent":"yes_no_decision","entities":[], "traits":[]}'''
 
             base.append(json.loads(array))
             jsonbase = json.dumps(base)
-            replyend = self.witReq(self.access_token, 'POST', '/samples', '', jsonbase)
+            replyend = self.witReq(self.access_token, 'POST', '/utterances', '', jsonbase)
             self.logger.debug(str(jsonbase))
             self.logger.debug(str(replyend))
             self.logger.info(u'Imessage Plugin:  wit.Ai Device successfully updated.')
@@ -1893,6 +1877,10 @@ class Plugin(indigo.PluginBase):
             # no app exisits
             # create & get new access_token
             self.wit_createapp(self.access_token)
+            self.wit_createintent(self.access_token, "greeting")
+            self.wit_createintent(self.access_token, "yes_no_decision")
+            self.wit_createintent(self.access_token, "device_status")
+            self.wit_createtrait(self.access_token, "wit$sentiment")
             self.wit_createentity(self.access_token, 'device_name')
 
         if checkappexists:
@@ -1900,6 +1888,7 @@ class Plugin(indigo.PluginBase):
             self.logger.info(u'or alternatively to start again.  Please delete button and recreate.')
             self.configInfo='errGenerateExists'
             return
+
 
         base =[]
         lookup = '{"lookups":["free-text", "keywords"]}'
@@ -1911,7 +1900,7 @@ class Plugin(indigo.PluginBase):
         self.logger.debug(str(entityput))
         t.sleep(15)
 
-        array2 = '''{"doc":"Indigo device_name","lookups":["free-text","keywords"],"values":['''
+        array2 = '''{"roles":["device_name"],"lookups":["free-text","keywords"],"keyword":['''
         #array2 = '''{"values":['''
         x=0
         synomynarray = []
@@ -1933,7 +1922,7 @@ class Plugin(indigo.PluginBase):
                         #self.logger.debug(u'Description: Array now equals:'+str(synomynarray))
 
                     devicename = str(device.name)
-                    array2 = array2 + '''{"value":"'''+devicename+'''","expressions":["'''+devicename+'''",'''
+                    array2 = array2 + '''{"keyword":"'''+devicename+'''","synonyms":["'''+devicename+'''",'''
                     if synomynarray:   # not empty
                         for synomyn in synomynarray:
                             array2 = array2 + '''"''' + synomyn + '''",'''
@@ -1956,7 +1945,7 @@ class Plugin(indigo.PluginBase):
                         #.logger.debug(u'Description: Array now equals:' + str(synomynarray))
 
                         devicename = str(device.name)
-                        array2 = array2 + '''{"value":"''' + devicename + '''","expressions":["''' + devicename + '''",'''
+                        array2 = array2 + '''{"keyword":"''' + devicename + '''","synonyms":["''' + devicename + '''",'''
                         if synomynarray:  # not empty
                             for synomyn in synomynarray:
                                 array2 = array2 + '''"''' + synomyn + '''",'''
@@ -1985,60 +1974,60 @@ class Plugin(indigo.PluginBase):
                     if hasattr(device, "displayStateValRaw") and device.displayStateValRaw in ['0',False,True] :
                         x=x+4
                         devicename = str(device.name)
-                        array = '''{"text":"Turn on '''+ devicename +'''","entities":[{"entity":"intent","value":"device_action"},{"entity":"wit$on_off","value":"true"},{"entity":"device_name","value":"'''+devicename+'''"}]}'''
+                        array = '''{"text":"Turn on '''+ devicename +'''","intent":"device_action","entities":[{"entity":"wit$on_off","value":"true"},{"entity":"device_name","value":"'''+devicename+'''"}], "traits":[]}'''
                         base.append(json.loads(array))
-                        array = '''{"text":"'''+ devicename +''' on","entities":[{"entity":"intent","value":"device_action"},{"entity":"wit$on_off","value":"true"},{"entity":"device_name","value":"'''+devicename+'''"}]}'''
+                        array = '''{"text":"'''+ devicename +''' on","intent":"device_action","entities":[{"entity":"wit$on_off","value":"true"},{"entity":"device_name","value":"'''+devicename+'''"}], "traits":[]}'''
                         base.append(json.loads(array))
-                        array = '''{"text":"Turn off '''+ devicename +'''","entities":[{"entity":"intent","value":"device_action"},{"entity":"wit$on_off","value":"false"},{"entity":"device_name","value":"'''+devicename+'''"}]}'''
+                        array = '''{"text":"Turn off '''+ devicename +'''","intent":"device_action","entities":[{"entity":"wit$on_off","value":"false"},{"entity":"device_name","value":"'''+devicename+'''"}], "traits":[]}'''
                         base.append(json.loads(array))
-                        array = '''{"text":"'''+ devicename +''' off","entities":[{"entity":"intent","value":"device_action"},{"entity":"wit$on_off","value":"false"},{"entity":"device_name","value":"'''+devicename+'''"}]}'''
+                        array = '''{"text":"'''+ devicename +''' off","intent":"device_action","entities":[{"entity":"wit$on_off","value":"false"},{"entity":"device_name","value":"'''+devicename+'''"}], "traits":[]}'''
                         base.append(json.loads(array))
-                        array = '''{"text":"Open ''' + devicename + '''","entities":[{"entity":"intent","value":"device_action"},{"entity":"wit$on_off","value":"true"},{"entity":"device_name","value":"''' + devicename + '''"}]}'''
+                        array = '''{"text":"Open ''' + devicename + '''","intent":"device_action","entities":[{"entity":"wit$on_off","value":"true"},{"entity":"device_name","value":"'''+devicename+'''"}], "traits":[]}'''
                         base.append(json.loads(array))
-                        array = '''{"text":"Close ''' + devicename + '''","entities":[{"entity":"intent","value":"device_action"},{"entity":"wit$on_off","value":"false"},{"entity":"device_name","value":"''' + devicename + '''"}]}'''
+                        array = '''{"text":"Close ''' + devicename + '''","intent":"device_action","entities":[{"entity":"wit$on_off","value":"false"},{"entity":"device_name","value":"'''+devicename+'''"}], "traits":[]}'''
                         base.append(json.loads(array))
 
                     if 'temperature' in device.states or 'Temperature' in device.states or device.deviceTypeId=='Temperature' or (hasattr(device, 'subModel') and device.subModel=='Temperature'):
                         x=x+4
                         devicename = str(device.name)
-                        array = '''{"text":"What is the temperature of the ''' + devicename + '''","entities":[{"entity":"intent","value":"temperature"},{"entity":"device_name","value":"''' + devicename + '''"}]}'''
+                        array = '''{"text":"What is the temperature of the ''' + devicename + '''","intent":"temperature", "entities":[{"entity":"device_name","value":"''' + devicename + '''"}], "traits":[]}'''
                         base.append(json.loads(array))
-                        array = '''{"text":"Tell me the temperature of the ''' + devicename + '''","entities":[{"entity":"intent","value":"temperature"},{"entity":"device_name","value":"''' + devicename + '''"}]}'''
+                        array = '''{"text":"Tell me the temperature of the ''' + devicename + '''","intent":"temperature", "entities":[{"entity":"device_name","value":"''' + devicename + '''"}], "traits":[]}'''
                         base.append(json.loads(array))
-                        array = '''{"text":"''' + devicename + ''' temperature? ","entities":[{"entity":"intent","value":"temperature"},{"entity":"device_name","value":"''' + devicename + '''"}]}'''
+                        array = '''{"text":"''' + devicename + ''' temperature? ","intent":"temperature", "entities":[{"entity":"device_name","value":"''' + devicename + '''"}], "traits":[]}'''
                         base.append(json.loads(array))
-                        array = '''{"text":"How hot is ''' + devicename + '''","entities":[{"entity":"intent","value":"temperature"},{"entity":"device_name","value":"''' + devicename + '''"}]}'''
+                        array = '''{"text":"How hot is ''' + devicename + '''","intent":"temperature", "entities":[{"entity":"device_name","value":"''' + devicename + '''"}], "traits":[]}'''
                         base.append(json.loads(array))
                     if device.pluginId == 'com.GlennNZ.indigoplugin.FindFriendsMini' and device.model =='FindFriends Device':
                         x=x+4
                         devicename = str(device.name)
                         address = device.states['address']
-                        array = '''{"text":"Where is ''' + devicename + '''","entities":[{"entity":"intent","value":"location"},{"entity":"device_name","value":"''' + devicename + '''"}]}'''
+                        array = '''{"text":"Where is ''' + devicename + '''","intent":"location","entities":[{"entity":"device_name","value":"''' + devicename + '''"}], "traits":[]}'''
                         base.append(json.loads(array))
-                        array = '''{"text":"Locate ''' + devicename + '''","entities":[{"entity":"intent","value":"location"},{"entity":"device_name","value":"''' + devicename + '''"}]}'''
+                        array = '''{"text":"Locate ''' + devicename + '''","intent":"location","entities":[{"entity":"device_name","value":"''' + devicename + '''"}], "traits":[]}'''
                         base.append(json.loads(array))
-                        array = '''{"text":"Find the location of ''' + devicename + '''","entities":[{"entity":"intent","value":"location"},{"entity":"device_name","value":"''' + devicename + '''"}]}'''
+                        array = '''{"text":"Find the location of ''' + devicename + '''","intent":"location","entities":[{"entity":"device_name","value":"''' + devicename + '''"}], "traits":[]}'''
                         base.append(json.loads(array))
-                        array = '''{"text":"Find ''' + devicename + ''' whereabouts","entities":[{"entity":"intent","value":"location"},{"entity":"device_name","value":"''' + devicename + '''"}]}'''
+                        array = '''{"text":"Find ''' + devicename + ''' whereabouts","intent":"location","entities":[{"entity":"device_name","value":"''' + devicename + '''"}], "traits":[]}'''
                         base.append(json.loads(array))
 
                     if 'brightnessLevel' in device.states:
                         x = x + 6
                         devicename = str(device.name)
-                        array = '''{"text":"Dim ''' + devicename + ''' to 10%","entities":[{"entity":"intent","value":"dim_set"},{"entity":"device_name","value":"''' + devicename + '''"},{"entity":"wit$number","value":"10"}]}'''
+                        array = '''{"text":"Dim ''' + devicename + ''' to 10%","intent":"dim_set","entities":[{"entity":"device_name","value":"''' + devicename + '''"},{"entity":"wit$number","value":"10"}], "traits":[]}'''
                         base.append(json.loads(array))
-                        array = '''{"text":"Set ''' + devicename + ''' to 10% dim","entities":[{"entity":"intent","value":"dim_set"},{"entity":"device_name","value":"''' + devicename + '''"},{"entity":"wit$number","value":"10"}]}'''
+                        array = '''{"text":"Set ''' + devicename + ''' to 10% dim","intent":"dim_set","entities":[{"entity":"device_name","value":"''' + devicename + '''"},{"entity":"wit$number","value":"10"}], "traits":[]}'''
                         base.append(json.loads(array))
-                        array = '''{"text":"Dim ''' + devicename + ''' to 60%","entities":[{"entity":"intent","value":"dim_set"},{"entity":"device_name","value":"''' + devicename + '''"},{"entity":"wit$number","value":"60"}]}'''
+                        array = '''{"text":"Dim ''' + devicename + ''' to 60%","intent":"dim_set","entities":[{"entity":"device_name","value":"''' + devicename + '''"},{"entity":"wit$number","value":"60"}], "traits":[]}'''
                         base.append(json.loads(array))
-                        array = '''{"text":"Set ''' + devicename + ''' to 60% brightness","entities":[{"entity":"intent","value":"dim_set"},{"entity":"device_name","value":"''' + devicename + '''"},{"entity":"wit$number","value":"60"}]}'''
+                        array = '''{"text":"Set ''' + devicename + ''' to 60% brightness","intent":"dim_set","entities":[{"entity":"device_name","value":"''' + devicename + '''"},{"entity":"wit$number","value":"60"}], "traits":[]}'''
                         base.append(json.loads(array))
-                        array = '''{"text":"Set ''' + devicename + ''' to 10% brightness","entities":[{"entity":"intent","value":"dim_set"},{"entity":"device_name","value":"''' + devicename + '''"},{"entity":"wit$number","value":"10"}]}'''
+                        array = '''{"text":"Set ''' + devicename + ''' to 10% brightness","intent":"dim_set","entities":[{"entity":"device_name","value":"''' + devicename + '''"},{"entity":"wit$number","value":"10"}], "traits":[]}'''
                         base.append(json.loads(array))
 
                     if x > 185:
                         jsonbase = json.dumps(base)
-                        replyend = self.witReq(self.access_token, 'POST', '/samples', '', jsonbase)
+                        replyend = self.witReq(self.access_token, 'POST', '/utterances', '', jsonbase)
                         self.logger.debug(str(jsonbase))
                         self.logger.debug(str(replyend))
                         x = 0
@@ -2049,56 +2038,56 @@ class Plugin(indigo.PluginBase):
                     if description != '' and description.startswith('witai'):
                         x = x + 4
                         devicename = str(device.name)
-                        array = '''{"text":"Turn on ''' + devicename + '''","entities":[{"entity":"intent","value":"device_action"},{"entity":"wit$on_off","value":"true"},{"entity":"device_name","value":"''' + devicename + '''"}]}'''
+                        array = '''{"text":"Turn on ''' + devicename + '''","intent":"device_action","entities":[{"entity":"wit$on_off","value":"true"},{"entity":"device_name","value":"''' + devicename + '''"}], "traits":[]}'''
                         base.append(json.loads(array))
-                        array = '''{"text":"''' + devicename + ''' on","entities":[{"entity":"intent","value":"device_action"},{"entity":"wit$on_off","value":"true"},{"entity":"device_name","value":"''' + devicename + '''"}]}'''
+                        array = '''{"text":"''' + devicename + ''' on","intent":"device_action","entities":[{"entity":"wit$on_off","value":"true"},{"entity":"device_name","value":"''' + devicename + '''"}], "traits":[]}'''
                         base.append(json.loads(array))
-                        array = '''{"text":"Turn off ''' + devicename + '''","entities":[{"entity":"intent","value":"device_action"},{"entity":"wit$on_off","value":"false"},{"entity":"device_name","value":"''' + devicename + '''"}]}'''
+                        array = '''{"text":"Turn off ''' + devicename + '''","intent":"device_action","entities":[{"entity":"wit$on_off","value":"false"},{"entity":"device_name","value":"''' + devicename + '''"}], "traits":[]}'''
                         base.append(json.loads(array))
-                        array = '''{"text":"''' + devicename + ''' off","entities":[{"entity":"intent","value":"device_action"},{"entity":"wit$on_off","value":"false"},{"entity":"device_name","value":"''' + devicename + '''"}]}'''
+                        array = '''{"text":"''' + devicename + ''' off","intent":"device_action","entities":[{"entity":"wit$on_off","value":"false"},{"entity":"device_name","value":"''' + devicename + '''"}], "traits":[]}'''
                         base.append(json.loads(array))
 
                         if 'temperature' in device.states or 'Temperature' in device.states or device.deviceTypeId=='Temperature' or (hasattr(device, 'subModel') and device.subModel=='Temperature'):
                             x = x + 4
                             devicename = str(device.name)
-                            array = '''{"text":"What is the temperature of the ''' + devicename + '''","entities":[{"entity":"intent","value":"temperature"},{"entity":"device_name","value":"''' + devicename + '''"}]}'''
+                            array = '''{"text":"What is the temperature of the ''' + devicename + '''","intent":"temperature","entities":[{"entity":"device_name","value":"''' + devicename + '''"}], "traits":[]}'''
                             base.append(json.loads(array))
-                            array = '''{"text":"Tell me the temperature of the ''' + devicename + '''","entities":[{"entity":"intent","value":"temperature"},{"entity":"device_name","value":"''' + devicename + '''"}]}'''
+                            array = '''{"text":"Tell me the temperature of the ''' + devicename + '''","intent":"temperature","entities":[{"entity":"device_name","value":"''' + devicename + '''"}], "traits":[]}'''
                             base.append(json.loads(array))
-                            array = '''{"text":"''' + devicename + ''' temperature? ","entities":[{"entity":"intent","value":"temperature"},{"entity":"device_name","value":"''' + devicename + '''"}]}'''
+                            array = '''{"text":"''' + devicename + ''' temperature? ","intent":"temperature","entities":[{"entity":"device_name","value":"''' + devicename + '''"}], "traits":[]}'''
                             base.append(json.loads(array))
-                            array = '''{"text":"How hot is ''' + devicename + '''","entities":[{"entity":"intent","value":"temperature"},{"entity":"device_name","value":"''' + devicename + '''"}]}'''
+                            array = '''{"text":"How hot is ''' + devicename + '''","intent":"temperature","entities":[{"entity":"device_name","value":"''' + devicename + '''"}], "traits":[]}'''
                             base.append(json.loads(array))
                         if device.pluginId == 'com.GlennNZ.indigoplugin.FindFriendsMini' and device.model == 'FindFriends Device':
                             x = x + 4
                             devicename = str(device.name)
                             address = device.states['address']
-                            array = '''{"text":"Where is ''' + devicename + '''","entities":[{"entity":"intent","value":"location"},{"entity":"device_name","value":"''' + devicename + '''"}]}'''
+                            array = '''{"text":"Where is ''' + devicename + '''","intent":"location","entities":[{"entity":"device_name","value":"''' + devicename + '''"}], "traits":[]}'''
                             base.append(json.loads(array))
-                            array = '''{"text":"Locate ''' + devicename + '''","entities":[{"entity":"intent","value":"location"},{"entity":"device_name","value":"''' + devicename + '''"}]}'''
+                            array = '''{"text":"Locate ''' + devicename + '''","intent":"location","entities":[{"entity":"device_name","value":"''' + devicename + '''"}], "traits":[]}'''
                             base.append(json.loads(array))
-                            array = '''{"text":"Find the location of ''' + devicename + '''","entities":[{"entity":"intent","value":"location"},{"entity":"device_name","value":"''' + devicename + '''"}]}'''
+                            array = '''{"text":"Find the location of ''' + devicename + '''","intent":"location","entities":[{"entity":"device_name","value":"''' + devicename + '''"}], "traits":[]}'''
                             base.append(json.loads(array))
-                            array = '''{"text":"Find ''' + devicename + ''' whereabouts","entities":[{"entity":"intent","value":"location"},{"entity":"device_name","value":"''' + devicename + '''"}]}'''
+                            array = '''{"text":"Find ''' + devicename + ''' whereabouts","intent":"location","entities":[{"entity":"device_name","value":"''' + devicename + '''"}], "traits":[]}'''
                             base.append(json.loads(array))
 
                         if 'brightnessLevel' in device.states:
                             x = x + 6
                             devicename = str(device.name)
-                            array = '''{"text":"Dim ''' + devicename + ''' to 10%","entities":[{"entity":"intent","value":"dim_set"},{"entity":"device_name","value":"''' + devicename + '''"},{"entity":"wit$number","value":"10"}]}'''
+                            array = '''{"text":"Dim ''' + devicename + ''' to 10%","intent":"dim_set","entities":[{"entity":"device_name","value":"''' + devicename + '''"},{"entity":"wit$number","value":"10"}], "traits":[]}'''
                             base.append(json.loads(array))
-                            array = '''{"text":"Set ''' + devicename + ''' to 10% dim","entities":[{"entity":"intent","value":"dim_set"},{"entity":"device_name","value":"''' + devicename + '''"},{"entity":"wit$number","value":"10"}]}'''
+                            array = '''{"text":"Set ''' + devicename + ''' to 10% dim","intent":"dim_set","entities":[{"entity":"device_name","value":"''' + devicename + '''"},{"entity":"wit$number","value":"10"}], "traits":[]}'''
                             base.append(json.loads(array))
-                            array = '''{"text":"Dim ''' + devicename + ''' to 60%","entities":[{"entity":"intent","value":"dim_set"},{"entity":"device_name","value":"''' + devicename + '''"},{"entity":"wit$number","value":"60"}]}'''
+                            array = '''{"text":"Dim ''' + devicename + ''' to 60%","intent":"dim_set","entities":[{"entity":"device_name","value":"''' + devicename + '''"},{"entity":"wit$number","value":"60"}], "traits":[]}'''
                             base.append(json.loads(array))
-                            array = '''{"text":"Set ''' + devicename + ''' to 60% brightness","entities":[{"entity":"intent","value":"dim_set"},{"entity":"device_name","value":"''' + devicename + '''"},{"entity":"wit$number","value":"60"}]}'''
+                            array = '''{"text":"Set ''' + devicename + ''' to 60% brightness","intent":"dim_set","entities":[{"entity":"device_name","value":"''' + devicename + '''"},{"entity":"wit$number","value":"60"}], "traits":[]}'''
                             base.append(json.loads(array))
-                            array = '''{"text":"Set ''' + devicename + ''' to 10% brightness","entities":[{"entity":"intent","value":"dim_set"},{"entity":"device_name","value":"''' + devicename + '''"},{"entity":"wit$number","value":"10"}]}'''
+                            array = '''{"text":"Set ''' + devicename + ''' to 10% brightness","intent":"dim_set","entities":[{"entity":"device_name","value":"''' + devicename + '''"},{"entity":"wit$number","value":"10"}], "traits":[]}'''
                             base.append(json.loads(array))
 
                 if x > 185:
                     jsonbase = json.dumps(base)
-                    replyend = self.witReq(self.access_token, 'POST', '/samples', '', jsonbase)
+                    replyend = self.witReq(self.access_token, 'POST', '/utterances', '', jsonbase)
                     self.logger.debug(str(jsonbase))
                     self.logger.debug(str(replyend))
                     x = 0
@@ -2107,7 +2096,7 @@ class Plugin(indigo.PluginBase):
 
         # and load again at end in case never make it to 195 samples
         jsonbase = json.dumps(base)
-        replyend = self.witReq(self.access_token, 'POST', '/samples', '', jsonbase)
+        replyend = self.witReq(self.access_token, 'POST', '/utterances', '', jsonbase)
         self.logger.debug(str(jsonbase))
         self.logger.debug(str(replyend))
         x = 0
@@ -2115,93 +2104,93 @@ class Plugin(indigo.PluginBase):
         self.sleep(71)
 
         ## manual samples here
-        array = '''{"text":"Tell me a joke","entities":[{"entity":"intent","value":"joke"}]}'''
+        array = '''{"text":"Tell me a joke","entities":[{"entity":"intent","value":"joke"}], "traits":[]}'''
         base.append(json.loads(array))
-        array = '''{"text":"Do you know any good jokes?","entities":[{"entity":"intent","value":"joke"}]}'''
+        array = '''{"text":"Do you know any good jokes?","entities":[{"entity":"intent","value":"joke"}], "traits":[]}'''
         base.append(json.loads(array))
-        array = '''{"text":"Please tell me a funny joke?","entities":[{"entity":"intent","value":"joke"}]}'''
+        array = '''{"text":"Please tell me a funny joke?","entities":[{"entity":"intent","value":"joke"}], "traits":[]}'''
         base.append(json.loads(array))
 
         jsonbase = json.dumps(base)
-        replyend = self.witReq(self.access_token, 'POST', '/samples', '', jsonbase)
+        replyend = self.witReq(self.access_token, 'POST', '/utterances', '', jsonbase)
         self.logger.debug(str(jsonbase))
         self.logger.debug(str(replyend))
         x = 0
         del base[:]
         self.sleep(15)
 
-        array = '''{"text":"Can you give me some advice","entities":[{"entity":"intent","value":"advice"}]}'''
+        array = '''{"text":"Can you give me some advice","entities":[{"entity":"intent","value":"advice"}], "traits":[]}'''
         base.append(json.loads(array))
-        array = '''{"text":"Do you have any advice for me?","entities":[{"entity":"intent","value":"advice"}]}'''
+        array = '''{"text":"Do you have any advice for me?","entities":[{"entity":"intent","value":"advice"}], "traits":[]}'''
         base.append(json.loads(array))
-        array = '''{"text":"Can you help with some advice?","entities":[{"entity":"intent","value":"advice"}]}'''
+        array = '''{"text":"Can you help with some advice?","entities":[{"entity":"intent","value":"advice"}], "traits":[]}'''
         base.append(json.loads(array))
-        array = '''{"text":"What should I do?","entities":[{"entity":"intent","value":"advice"}]}'''
+        array = '''{"text":"What should I do?","entities":[{"entity":"intent","value":"advice"}], "traits":[]}'''
         base.append(json.loads(array))
 
         jsonbase = json.dumps(base)
-        replyend = self.witReq(self.access_token, 'POST', '/samples', '', jsonbase)
+        replyend = self.witReq(self.access_token, 'POST', '/utterances', '', jsonbase)
         self.logger.debug(str(jsonbase))
         self.logger.debug(str(replyend))
         x = 0
         del base[:]
         self.sleep(15)
 
-        array = '''{"text":"Hello","entities":[{"entity":"intent","value":"greeting"}]}'''
+        array = '''{"text":"Hello","entities":[{"entity":"intent","value":"greeting"}], "traits":[]}'''
         base.append(json.loads(array))
-        array = '''{"text":"Hi, how are you?","entities":[{"entity":"intent","value":"greeting"}]}'''
+        array = '''{"text":"Hi, how are you?","entities":[{"entity":"intent","value":"greeting"}], "traits":[]}'''
         base.append(json.loads(array))
-        array = '''{"text":"What is up?","entities":[{"entity":"intent","value":"greeting"}]}'''
+        array = '''{"text":"What is up?","entities":[{"entity":"intent","value":"greeting"}], "traits":[]}'''
         base.append(json.loads(array))
 
         jsonbase = json.dumps(base)
-        replyend = self.witReq(self.access_token, 'POST', '/samples', '', jsonbase)
+        replyend = self.witReq(self.access_token, 'POST', '/utterances', '', jsonbase)
         self.logger.debug(str(jsonbase))
         self.logger.debug(str(replyend))
         x = 0
         del base[:]
         self.sleep(15)
 
-        array = '''{"text":"Should I value you opinion?","entities":[{"entity":"intent","value":"yes_no_decision"}]}'''
+        array = '''{"text":"Should I value you opinion?","entities":[{"entity":"intent","value":"yes_no_decision"}], "traits":[]}'''
         base.append(json.loads(array))
-        array = '''{"text":"Shall I or Shall I not?","entities":[{"entity":"intent","value":"yes_no_decision"}]}'''
+        array = '''{"text":"Shall I or Shall I not?","entities":[{"entity":"intent","value":"yes_no_decision"}], "traits":[]}'''
         base.append(json.loads(array))
-        array = '''{"text":"Should I do it?","entities":[{"entity":"intent","value":"yes_no_decision"}]}'''
+        array = '''{"text":"Should I do it?","entities":[{"entity":"intent","value":"yes_no_decision"}], "traits":[]}'''
         base.append(json.loads(array))
-        array = '''{"text":"Should I really do this?","entities":[{"entity":"intent","value":"yes_no_decision"}]}'''
+        array = '''{"text":"Should I really do this?","entities":[{"entity":"intent","value":"yes_no_decision"}], "traits":[]}'''
         base.append(json.loads(array))
-        array = '''{"text":"What do you suggest? Yes or No?","entities":[{"entity":"intent","value":"yes_no_decision"}]}'''
+        array = '''{"text":"What do you suggest? Yes or No?","entities":[{"entity":"intent","value":"yes_no_decision"}], "traits":[]}'''
         base.append(json.loads(array))
 
         jsonbase = json.dumps(base)
-        replyend = self.witReq(self.access_token, 'POST', '/samples', '', jsonbase)
+        replyend = self.witReq(self.access_token, 'POST', '/utterances', '', jsonbase)
         self.logger.debug(str(jsonbase))
         self.logger.debug(str(replyend))
         x = 0
         del base[:]
         self.sleep(15)
 
-        array = '''{"text":"Piss off you idiot","entities":[{"entity":"intent","value":"insult"},{"entity":"wit$sentiment","value":"negative"}]}'''
+        array = '''{"text":"Piss off you idiot","entities":[{"entity":"intent","value":"insult"},{"entity":"wit$sentiment","value":"negative"}], "traits":[]}'''
         base.append(json.loads(array))
-        array = '''{"text":"Fuck off","entities":[{"entity":"intent","value":"insult"},{"entity":"wit$sentiment","value":"negative"}]}'''
+        array = '''{"text":"Fuck off","entities":[{"entity":"intent","value":"insult"},{"entity":"wit$sentiment","value":"negative"}], "traits":[]}'''
         base.append(json.loads(array))
-        array = '''{"text":"Go away","entities":[{"entity":"intent","value":"insult"},{"entity":"wit$sentiment","value":"negative"}]}'''
+        array = '''{"text":"Go away","entities":[{"entity":"intent","value":"insult"},{"entity":"wit$sentiment","value":"negative"}], "traits":[]}'''
         base.append(json.loads(array))
-        array = '''{"text":"Fuck you with bells on","entities":[{"entity":"intent","value":"insult"},{"entity":"wit$sentiment","value":"negative"}]}'''
+        array = '''{"text":"Fuck you with bells on","entities":[{"entity":"intent","value":"insult"},{"entity":"wit$sentiment","value":"negative"}], "traits":[]}'''
         base.append(json.loads(array))
-        array = '''{"text":"You are useless!","entities":[{"entity":"intent","value":"insult"}, {"entity":"wit$sentiment","value":"negative"}]}'''
+        array = '''{"text":"You are useless!","entities":[{"entity":"intent","value":"insult"}, {"entity":"wit$sentiment","value":"negative"}], "traits":[]}'''
         base.append(json.loads(array))
-        array = '''{"text":"You are tosser!","entities":[{"entity":"intent","value":"insult"}, {"entity":"wit$sentiment","value":"negative"}]}'''
+        array = '''{"text":"You are tosser!","entities":[{"entity":"intent","value":"insult"}, {"entity":"wit$sentiment","value":"negative"}], "traits":[]}'''
         base.append(json.loads(array))
 
         jsonbase = json.dumps(base)
-        replyend = self.witReq(self.access_token, 'POST', '/samples', '', jsonbase)
+        replyend = self.witReq(self.access_token, 'POST', '/utterances', '', jsonbase)
         self.logger.debug(str(jsonbase))
         self.logger.debug(str(replyend))
         x = 0
         del base[:]
 
-        self.logger.error(u'Indigo iMessage wit.ai Application Created Successfully.')
+        self.logger.info(u'Indigo iMessage wit.ai Application Created Successfully.')
         self.configInfo = 'createsuccess'
 
     def wit_deleteapp(self, access_token):
@@ -2248,7 +2237,7 @@ class Plugin(indigo.PluginBase):
         self.logger.debug(u'---- Saved PluginPrefs ------')
         self.logger.debug(str(self.pluginPrefs))
 
-        self.logger.error(u'New Access Token Equals:'+str(self.access_token))
+        self.logger.info(u'New Access Token Equals:'+str(self.access_token))
         return createnewapp.get('access_token')
 
     def wit_getappid(self, access_token):
@@ -2284,13 +2273,37 @@ class Plugin(indigo.PluginBase):
 
         return False
 
+    def wit_createintent(self, access_token, intent):
+        if self.debugextra:
+            self.logger.debug(u'Create New intent {}'.format(intent))
+        params = {}
+        params['v'] = '20181110'
+        array = '''{ "name":"'''+intent+'''"}'''
+        self.logger.debug(u'New Intent Created:'+str(array))
+        createnewentity = self.witReq(access_token, 'POST','/intents', params, array)
+        self.logger.debug(u'Reply Create Intent:' + str(createnewentity))
+        return
+
+    def wit_createtrait(self, access_token, intent):
+        if self.debugextra:
+            self.logger.debug(u'Create New Trait {}'.format(intent))
+        params = {}
+        params['v'] = '20181110'
+        array = '''{ "name":"'''+intent+'''"}'''
+        self.logger.debug(u'New Trait Created:'+str(array))
+        createnewentity = self.witReq(access_token, 'POST','/traits', params, array)
+        self.logger.debug(u'Reply Create Intent:' + str(createnewentity))
+        return
 
     def wit_createentity(self, access_token, entity):
         if self.debugextra:
             self.logger.debug(u'Create New Entity')
         params = {}
         params['v'] = '20181110'
-        array = '''{"doc":"Indigo '''+entity+'''", "id":"'''+entity+'''"}'''
+        array = '''{ "id":"'''+entity+'''"  ,
+        "name":"'''+entity+'''",
+        "role":"'''+entity+'''",
+        }'''
         self.logger.debug(u'New Entity Created:'+str(array))
         createnewentity = self.witReq(access_token, 'POST','/entities', params, array)
         self.logger.debug(u'Reply Create Entity:' + str(createnewentity))
