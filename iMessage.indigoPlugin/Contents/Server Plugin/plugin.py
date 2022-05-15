@@ -932,7 +932,7 @@ class Plugin(indigo.PluginBase):
                             statusofDevice = newstatus
                     self.as_sendmessage(buddy, 'Current Status of ' + devicetoaction +' is '+statusofDevice)
                 except:
-                    self.logger.exception(u'Caught Exception in device Status intent')
+                    self.logger.error(u'Caught Error in device Status intent')
                 return
 
             if intent =='insult' and float(intent_confidence)>0.50:
@@ -1632,6 +1632,8 @@ class Plugin(indigo.PluginBase):
 
             self.wit_createentity(self.access_token,"device_name")
             self.wit_createintent(self.access_token,"device_status")
+            self.wit_createintent(self.access_token, "joke")
+            self.wit_createintent(self.access_token, "advice")
 
             array2 = '''{"roles":["device_name"],"lookups":["free-text","keywords"],"keywords":['''
             # array2 = '''{"values":['''
@@ -1810,28 +1812,28 @@ class Plugin(indigo.PluginBase):
             self.logger.debug(str(replyend))
             x = 0
             del base[:]
-            t.sleep(10)
-
-            array = '''{"text":"Piss off you idiot","intent":"insult","entities":[], "traits":[{"trait":"wit$sentiment","value":"negative"}]}'''
-            base.append(json.loads(array))
-            array = '''{"text":"Fuck off","intent":"insult","entities":[], "traits":[{"trait":"wit$sentiment","value":"negative"}]}'''
-            base.append(json.loads(array))
-            array = '''{"text":"Go away","intent":"insult","entities":[], "traits":[{"trait":"wit$sentiment","value":"negative"}]}'''
-            base.append(json.loads(array))
-            array = '''{"text":"Fuck you with bells on","intent":"insult","entities":[], "traits":[{"trait":"wit$sentiment","value":"negative"}]}'''
-            base.append(json.loads(array))
-            array = '''{"text":"You are useless!","intent":"insult","entities":[], "traits":[{"trait":"wit$sentiment","value":"negative"}]}'''
-            base.append(json.loads(array))
-            array = '''{"text":"You are tosser!","intent":"insult","entities":[], "traits":[{"trait":"wit$sentiment","value":"negative"}]}'''
-            base.append(json.loads(array))
-
-
-            jsonbase = json.dumps(base)
-            replyend = self.witReq(self.access_token, 'POST', '/utterances', '', jsonbase)
-            self.logger.debug(str(jsonbase))
-            self.logger.debug(str(replyend))
-            x = 0
-            del base[:]
+            # t.sleep(10)
+            #
+            # array = '''{"text":"Piss off you idiot","intent":"insult","entities":[], "traits":[{"trait":"wit$sentiment","value":"negative"}]}'''
+            # base.append(json.loads(array))
+            # array = '''{"text":"Fuck off","intent":"insult","entities":[], "traits":[{"trait":"wit$sentiment","value":"negative"}]}'''
+            # base.append(json.loads(array))
+            # array = '''{"text":"Go away","intent":"insult","entities":[], "traits":[{"trait":"wit$sentiment","value":"negative"}]}'''
+            # base.append(json.loads(array))
+            # array = '''{"text":"Fuck you with bells on","intent":"insult","entities":[], "traits":[{"trait":"wit$sentiment","value":"negative"}]}'''
+            # base.append(json.loads(array))
+            # array = '''{"text":"You are useless!","intent":"insult","entities":[], "traits":[{"trait":"wit$sentiment","value":"negative"}]}'''
+            # base.append(json.loads(array))
+            # array = '''{"text":"You are tosser!","intent":"insult","entities":[], "traits":[{"trait":"wit$sentiment","value":"negative"}]}'''
+            # base.append(json.loads(array))
+            #
+            #
+            # jsonbase = json.dumps(base)
+            # replyend = self.witReq(self.access_token, 'POST', '/utterances', '', jsonbase)
+            # self.logger.debug(str(jsonbase))
+            # self.logger.debug(str(replyend))
+            # x = 0
+            # del base[:]
 
             ## send seperately
             array = '''{"text":"Should I value you opinion?","intent":"yes_no_decision","entities":[], "traits":[]}'''
@@ -1880,6 +1882,8 @@ class Plugin(indigo.PluginBase):
             self.wit_createintent(self.access_token, "greeting")
             self.wit_createintent(self.access_token, "yes_no_decision")
             self.wit_createintent(self.access_token, "device_status")
+            self.wit_createintent(self.access_token, "advice")
+            self.wit_createintent(self.access_token, "joke")
             self.wit_createtrait(self.access_token, "wit$sentiment")
             self.wit_createentity(self.access_token, 'device_name')
 
@@ -2170,25 +2174,25 @@ class Plugin(indigo.PluginBase):
         del base[:]
         self.sleep(15)
 
-        array = '''{"text":"Piss off you idiot","entities":[{"entity":"intent","value":"insult"},{"entity":"wit$sentiment","value":"negative"}], "traits":[]}'''
-        base.append(json.loads(array))
-        array = '''{"text":"Fuck off","entities":[{"entity":"intent","value":"insult"},{"entity":"wit$sentiment","value":"negative"}], "traits":[]}'''
-        base.append(json.loads(array))
-        array = '''{"text":"Go away","entities":[{"entity":"intent","value":"insult"},{"entity":"wit$sentiment","value":"negative"}], "traits":[]}'''
-        base.append(json.loads(array))
-        array = '''{"text":"Fuck you with bells on","entities":[{"entity":"intent","value":"insult"},{"entity":"wit$sentiment","value":"negative"}], "traits":[]}'''
-        base.append(json.loads(array))
-        array = '''{"text":"You are useless!","entities":[{"entity":"intent","value":"insult"}, {"entity":"wit$sentiment","value":"negative"}], "traits":[]}'''
-        base.append(json.loads(array))
-        array = '''{"text":"You are tosser!","entities":[{"entity":"intent","value":"insult"}, {"entity":"wit$sentiment","value":"negative"}], "traits":[]}'''
-        base.append(json.loads(array))
-
-        jsonbase = json.dumps(base)
-        replyend = self.witReq(self.access_token, 'POST', '/utterances', '', jsonbase)
-        self.logger.debug(str(jsonbase))
-        self.logger.debug(str(replyend))
-        x = 0
-        del base[:]
+        # array = '''{"text":"Piss off you idiot","entities":[{"entity":"intent","value":"insult"},{"entity":"wit$sentiment","value":"negative"}], "traits":[]}'''
+        # base.append(json.loads(array))
+        # array = '''{"text":"Fuck off","entities":[{"entity":"intent","value":"insult"},{"entity":"wit$sentiment","value":"negative"}], "traits":[]}'''
+        # base.append(json.loads(array))
+        # array = '''{"text":"Go away","entities":[{"entity":"intent","value":"insult"},{"entity":"wit$sentiment","value":"negative"}], "traits":[]}'''
+        # base.append(json.loads(array))
+        # array = '''{"text":"Fuck you with bells on","entities":[{"entity":"intent","value":"insult"},{"entity":"wit$sentiment","value":"negative"}], "traits":[]}'''
+        # base.append(json.loads(array))
+        # array = '''{"text":"You are useless!","entities":[{"entity":"intent","value":"insult"}, {"entity":"wit$sentiment","value":"negative"}], "traits":[]}'''
+        # base.append(json.loads(array))
+        # array = '''{"text":"You are tosser!","entities":[{"entity":"intent","value":"insult"}, {"entity":"wit$sentiment","value":"negative"}], "traits":[]}'''
+        # base.append(json.loads(array))
+        #
+        # jsonbase = json.dumps(base)
+        # replyend = self.witReq(self.access_token, 'POST', '/utterances', '', jsonbase)
+        # self.logger.debug(str(jsonbase))
+        # self.logger.debug(str(replyend))
+        # x = 0
+        # del base[:]
 
         self.logger.info(u'Indigo iMessage wit.ai Application Created Successfully.')
         self.configInfo = 'createsuccess'
