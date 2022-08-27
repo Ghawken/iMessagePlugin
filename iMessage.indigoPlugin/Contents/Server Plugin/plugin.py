@@ -580,9 +580,15 @@ class Plugin(indigo.PluginBase):
                     self.logger.debug(u'Buddies Current now equals:'+str(buddiescurrent))
 
         if self.showBuddies:
-            self.logger.error(u'iMessage Received from Buddy(s):  Buddy(s) Handle Below:')
+            #self.logger.error(u'iMessage Received from Buddy(s):  Buddy(s) Handle Below:')
+            self.logger.info(u"{0:=^165}".format("'Show Buddy Handles' Enabled in Plugin Config"))
+            self.logger.info(u"{0:=^165}".format(" iMsg received from Buddy "))
             for buddies in buddiescurrent:
-                self.logger.error(str(buddies))
+                self.logger.info(str(buddies))
+            self.logger.info(u"{0:=^165}".format(" End of Buddies "))
+            self.logger.info(u"{0:=^165}".format(" To disable this message uncheck 'Show Buddy Handle' in Plugin Config, once Buddy Handle established "))
+            self.logger.info(u"{0:=^165}".format("="))
+
 
         for key, val in messages.copy().items():
             if key in self.allowedBuddies:
@@ -1642,7 +1648,7 @@ class Plugin(indigo.PluginBase):
 
 
     ## Push all new names and synomyns
-            for device in indigo.devices.itervalues():
+            for device in indigo.devices.iter():
                 if device.enabled:
 
                     if self.wit_alldevices:
@@ -1706,7 +1712,7 @@ class Plugin(indigo.PluginBase):
             x=0
             base = []
 
-            for device in indigo.devices.itervalues():
+            for device in indigo.devices.iter():
                 if device.enabled:
                     if self.wit_alldevices:
                         self.logger.debug(u'Okay - sending all device details to help with parsing...')
@@ -1909,7 +1915,7 @@ class Plugin(indigo.PluginBase):
         x=0
         synomynarray = []
 
-        for device in indigo.devices.itervalues():
+        for device in indigo.devices.iter():
             if device.enabled:
                 if self.wit_alldevices:
                     description = str(device.description)
@@ -1971,7 +1977,7 @@ class Plugin(indigo.PluginBase):
 
         t.sleep(10)
 
-        for device in indigo.devices.itervalues():
+        for device in indigo.devices.iter():
             if device.enabled:
                 if self.wit_alldevices:
                     self.logger.debug(u'Okay - sending all device details to help with parsing...')
