@@ -141,5 +141,11 @@
 
         </ConfigUI>
     </Action>
+
+    <Action id="chatGPT" uiPath="hidden">
+    <Name>send to chatGPT</Name>
+    <CallbackMethod>handle_incoming</CallbackMethod>
+</Action>
+
 </Actions>
 

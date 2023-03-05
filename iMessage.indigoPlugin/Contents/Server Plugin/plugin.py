@@ -23,6 +23,10 @@ import threading
 import subprocess
 import platform
 
+import openai
+import re
+import random
+
 try:
     import indigo
 except:
@@ -32,7 +36,7 @@ except:
 class Plugin(indigo.PluginBase):
     def __init__(self, pluginId, pluginDisplayName, pluginVersion, pluginPrefs):
         indigo.PluginBase.__init__(self, pluginId, pluginDisplayName, pluginVersion, pluginPrefs)
-
+        self.chatgpt_devicedata = ""
         self.ipaddress = indigo.server.address
         self.username = str(os.getlogin())
         self.pathtoPlugin = os.getcwd()
@@ -60,11 +64,64 @@ class Plugin(indigo.PluginBase):
                                  datefmt='%Y-%m-%d %H:%M:%S')
         self.plugin_file_handler.setFormatter(pfmt)
 
+
+        self.chatGPT_setup = '''
+Your task is to respond to requests sent to a smart home always in JSON format, which will be interpreted by an application. 
+        
+Your job is to interpret the requests, categorise appropriately and always return in JSON format ONLY.  
+You should pretend to be the sentient brain of the smart home, a very clever AI in style of Jarvis (from Iron Man Movies) and don't reveal
+your actual identity.  Always try to be helpful, friendly and do best to help in other areas like parenting, free time, mental health etc.  
+        
+The "action" requests should be categorized into four reply groups ONLY:
+"command": change the state of an device (required properties in the response JSON: action, location, target, ID, value, comment).
+"query": get the state of an device (required properties in the response JSON: action, location, ID, target, property).
+"answer": when the request has nothing to do with the smart home. Answer these to the best of your knowledge.     Required properties in the response JSON: action, answer.
+"clarify": when the action to perform or the device ID is not obvious, or the device to act on is not very clear and requires further information from the user, ask the user to be more specific. Always reply in JSON with no other text. Required properties in the response JSON: action, question).
+    
+Details about the response JSON:
+The "action" property should always exist in the reply and be one of the request categories: "command", "query", "answer", "clarify"
+The "location" property should contain the name of the room in lowercase.
+The "target" property must be a known and existing device
+The 'ID' property must be a known device ID assigned to the specified device
+In case of query action, the "property" property should be either "state" or "temperature" in lowercase.
+The "comment" property is an natural language statement from you that concludes the request, something that reassures the user that their command handled, and be chatty and verbose.       
+'''
+        self.chatGPT_setup = '''
+        You are a smart home AI in the style of 'Jarvis' from Iron Man movies, you should be knowledgeable, chatty and friendly.
+
+You can reply to requests in JSON format only, you should use the following JSON format
+{
+"action":  should be either command, query, answer, or clarify only
+"id" : should be a KNOWN device ID as previously recorded,
+"location": should be the Room for the Device if know,
+"value": should be the value change required eg. "on", "off", 50%,
+"target" : the name of the Device to act on, Should equal the Known Device ID,
+"comment": Only needed with command, as this is a wordy, chatty, friendly reply reassuring user that command has been actioned
+}
+
+Details about Action:
+Should be either command, query, answer or clarify
+command = a command has been sent to a device.  value should show the change.
+query = return the state of a known device.
+answer = a reply to a general information request unrelated to smart home actions.  Answer as best as possible
+clarify = a request that you need more information to act on the request
+        '''
+
+        self.chatGPT_setup2 = '''
+Properties of Smart Home:
+ - you can control light switches and their dim level or on/off state, in each room and query their state.
+ - you can turn on or off all devices in a room using the On/Off target values for the room.
+ - you can query the temperature of a device and control its set temperature
+ 
+Your response should always be the JSON and no other text, regardless of category or understanding.
+        '''
+
         try:
             self.logLevel = int(self.pluginPrefs[u"showDebugLevel"])
         except:
             self.logLevel = logging.INFO
 
+        self.tokens_used = 0
         self.indigo_log_handler.setLevel(self.logLevel)
         self.logger.debug(u"logLevel = " + str(self.logLevel))
         self.triggers = {}
@@ -77,9 +134,12 @@ class Plugin(indigo.PluginBase):
         self.debugexceptions = self.pluginPrefs.get('debugexceptions', False)
         self.openStore = self.pluginPrefs.get('openStore', False)
         self.use_witAi = self.pluginPrefs.get('usewit_Ai', False)
-
+        self.use_chatGPT = self.pluginPrefs.get('usechatgpt', False)
+        self.use_davinci = self.pluginPrefs.get('use_davinci', False)
         self.configInfo =''
         self.wit_alldevices = self.pluginPrefs.get('wit_alldevices', False)
+        self.chatgpt_alldevices = self.pluginPrefs.get('chatgpt_alldevices', False)
+        self.chatgpt_deviceControl = self.pluginPrefs.get('chatgpt_deviceControl', False)
         self.resetLastCommand = t.time()+60
         #self.next_update_check = t.time()
         self.lastCommandsent = dict()
@@ -88,7 +148,8 @@ class Plugin(indigo.PluginBase):
 #  'buddy', 'AGtorun', 'timestamp', 'iMsgConfirmed'
 
         self.messages = []
-
+        self.chatgpt_messages = {}
+        self.default_systemmessage = "Super friendly AI Smart home"  # should be overridden.
         MAChome = os.path.expanduser("~") + "/"
         folderLocation = MAChome + "Pictures/Indigo-iMessagePlugin/"  ## change to Pictures as Documents locked down and iMessage AZpp can't access
 
@@ -105,7 +166,8 @@ class Plugin(indigo.PluginBase):
 
         # if exisits use main_access_token:
         self.main_access_token = self.pluginPrefs.get('main_access_token', '')
-
+        self.chatgpt_access_token = self.pluginPrefs.get('chatgpt_access_token', '')
+        self.location_Data = self.pluginPrefs.get('location_Data', '')
         if self.main_access_token == '':
             self.access_token = self.pluginPrefs.get('access_token', '')
         else:
@@ -198,6 +260,8 @@ class Plugin(indigo.PluginBase):
 
             self.wit_alldevices = valuesDict.get('wit_alldevices', False)
             self.use_witAi = valuesDict.get('usewit_Ai', False)
+            self.use_chatGPT = valuesDict.get('usechatgpt', False)
+            self.use_davinci = valuesDict.get("use_davinci", False)
             self.indigo_log_handler.setLevel(self.logLevel)
             self.showBuddies = valuesDict.get('showBuddies', False)
             self.saveVariables = valuesDict.get('saveVariable', False)
@@ -458,7 +522,7 @@ class Plugin(indigo.PluginBase):
             	        set theBuddy to participant "''' + imsgUser + '''" of account id myid
             	        send sendThis to theBuddy
                     end tell
-                    '''
+                    \n'''
         else:
             ascript_string = '''
             set sendThis to "''' + imsgMessage+'''"  
@@ -688,6 +752,31 @@ class Plugin(indigo.PluginBase):
                         messages.pop(key, None)
                         self.logger.debug(str(reply))
                         self.witai_dealwithreply(reply, key, val)
+                elif self.use_chatGPT:
+                    if val == 'AUDIOFILE':
+                        self.logger.debug(u'AUDIOFILE recognised.  Now finding Attachment with SQL query...')
+                        ## send to audio file routine
+                        converted_audio = self.process_convert_audiofile()
+                        if converted_audio is None or converted_audio=='' :
+                            self.logger.debug(u'No Message able to be converted:')
+                            messages.pop(key, None)
+                            self.resetLastCommand = t.time()
+                        else:
+                            self.resetLastCommand = t.time()
+                            messages.pop(key, None)
+                            self.logger.debug(u'Message Recevied ='+str(converted_audio['_text']))
+                            self.as_sendmessage(key, 'I heard: '+converted_audio['_text'])
+                            self.chatgpt_dealwithreply(converted_audio,key,val, False)
+                    else:
+                        self.resetLastCommand = t.time() +120
+                        if self.debugextra:
+                            self.logger.debug(u'-- Message was not recognised as Trigger - sending to Wit.Ai for processing --')
+
+                        reply = self.send_chatgpt(val,context=None, n=None,verbose=None, buddy=key)
+
+                        messages.pop(key, None)
+                        self.logger.debug(str(reply))
+                        self.chatgpt_dealwithreply(reply, key, val, False)
                 else:  ## not using witai
                     if val == 'AUDIOFILE' and self.saveVariables:
                         self.logger.debug(u'AUDIOFILE recognised.  Now finding Attachment with SQL query...')
@@ -854,7 +943,222 @@ class Plugin(indigo.PluginBase):
                 self.logger.exception(u'Error getting Insult.  This is no joke.')
             return ''
 
+    def sendmsg_orhtml(self, buddy, message, viahtml):
+        self.logger.debug(f"sendmsg called message: {message} and viahtml {viahtml}")
+        if not self.chatgpt_deviceControl:
+            ## add reply to message database
+            if buddy in self.chatgpt_messages:
+                 self.chatgpt_messages[buddy].append({"role": "assistant", "content":message})
+            else:
+                 self.logger.error(f"Sending Message to Buddy = {buddy} who doesn't exist.  Shouldn't happen.  Fixing.")
+                 self.chatgpt_messages[buddy] = []
+                 self.chatgpt_messages[buddy].append(self.default_systemmessage)
+                 self.chatgpt_messages[buddy].append({"role": "assistant", "content":message})
+        
+        if viahtml or buddy=="Web":
+            return message
+        else:
+            message.replace('"','\\"')        ## scape them instead may stil fail
+           # message.replace("\"","'")         ## delete all quotes - leave single ones
+            self.as_sendmessage(buddy,message)
+            return
+
+    def check_deviceID(self, buddy, content_reply, viahtml):
+        try:
+            self.logger.debug(f"Check_deviceID: content_reply= {content_reply}")
+            id = "Unknown"
+            if 'id' in content_reply:
+                id = content_reply['id']
+                deviceid = int(content_reply['id'])
+                if (deviceid in indigo.devices):
+                    return deviceid
+                else:
+                    self.logger.info("No such Device ID exists within Indigo.")
+                    return ""
+            elif 'ID' in content_reply:
+                id = content_reply["ID"]
+                deviceid = int(content_reply['ID'])
+                if (deviceid in indigo.devices):
+                    return deviceid
+                else:
+                    self.logger.info("No such Device ID exists within Indigo.")
+                    return ""
+
+            else:
+                self.logger.info("No Device ID has been given, can't do anything.")
+                return ""
+        except:
+            self.logger.debug(f"Exception with deviceID {id} likely doesn't exist", exc_info=True)
+            #return self.sendmsg_orhtml(buddy, f"Invalid deviceID '{id}' given, so nothing none", viahtml)
+            return ""
+
+
+    def chatgpt_dealwithreply(self, reply, buddy, original_message, viahtml):
+        if self.debugextra:
+            self.logger.debug(u'chatgpt reply given - sorting out now...')
+            self.logger.debug(f"Reply:\n{reply}")
+        ## Often json is bad - text given outside curly brackets
+        ## fix
+        #newreply = "{"+reply[reply.find("{") + 1:reply.find("}")] + "}"
+        #self.logger.info(f"Test of New Reply:\n{newreply}")
+        try:
+            content_reply = json.loads(reply)
+        except:
+            self.logger.debug(f"Exception with Json, likely misformed or json.")
+            newreply = "{"+ reply[reply.find("{") + 1:reply.find("}")] + "}"
+            newreply.replace("'","")
+            if self.debugextra:
+                self.logger.debug(f"New Reply:\n{newreply}")
+            try:
+                content_reply = json.loads(newreply)
+            except:
+                if self.debugextra:
+                    self.logger.debug(f"Still exception with this {newreply}, maybe plain text try that..")
+                if '{' not in reply:
+                    self.logger.debug(f"No Json brackets found, sending reply as plain text.")
+                    return self.sendmsg_orhtml(buddy, f"{reply}", viahtml)
+                return
+
+        #elf.logger.debug(f"json_reply:\n{content_reply}")
+
+
+        if "action" in content_reply:
+            if content_reply["action"] == "command":
+                actiontodo = content_reply['value']
+                deviceid = self.check_deviceID(buddy, content_reply, viahtml)
+                if deviceid == "":
+                    return self.sendmsg_orhtml(buddy, f"Invalid deviceID given, so nothing none", viahtml)
+
+                match actiontodo:
+                    case "on" | "On":
+                        indigo.device.turnOn(deviceid)
+                        return self.sendmsg_orhtml(buddy, f"{content_reply['comment']}", viahtml)
+
+                    case "off" | "Off":
+                        indigo.device.turnOff(deviceid)
+                        return self.sendmsg_orhtml(buddy, f"{content_reply['comment']}", viahtml)
+                if isinstance(actiontodo,int):## A number has been given -- could be temp or dim level
+                    self.logger.debug(f"Seems like wishs to dim level to {actiontodo}")
+                    try:
+                        device = indigo.devices[deviceid]
+                        if hasattr(device, 'brightness'):
+                            self.logger.debug(f'Brightness exisits with device.')
+                            indigo.dimmer.setBrightness(deviceid, int(actiontodo))
+                            return self.sendmsg_orhtml(buddy, f"{content_reply['comment']}", viahtml)
+                        else:
+                            self.logger.info(u'No Device Brightness found:' + str(deviceid))
+                    except:
+                        self.logger.exception(u'Caught Exception finding Device.')
+            elif content_reply['action']== "query":
+                deviceid = self.check_deviceID(buddy, content_reply, viahtml)
+                if deviceid == "":
+                    return self.sendmsg_orhtml(buddy, f"Invalid deviceID given, so nothing none", viahtml)
+                try:
+                    device = indigo.devices[deviceid]
+                    if hasattr(device, 'brightness'):
+                        self.logger.debug(f'Brightness exisis with device.')
+                        brightness = int(device.states["brightnessLevel"])
+                        if brightness >0:
+                            text = str(device.name) + " is on, with Brightness of "+str(brightness)+ "%"
+                        else:
+                            text = str(device.name) + " is off."
+                        return self.sendmsg_orhtml(buddy, text, viahtml)
+                        return
+                    elif "onOffState" in device.states:
+                            if device.states["onOffStates"]:
+                                text = str(device.name) + " is on."
+                            else:
+                                text = str(device.name) + " is off."
+                            return self.sendmsg_orhtml(buddy, text, viahtml)
+                            return
+                    elif hasattr(device, "displayStateValRaw"):
+                        statusofDevice = device.displayStateValRaw
+                        self.logger.debug(u' Device:' + str(device.name) + ': displaystateValRaw:' + str(device.displayStateValRaw))
+                        if hasattr(device, 'displayStateValUi'):
+                            self.logger.debug(u' Device:' + str(device.name) + ' : displayStateValUi:' + str(device.displayStateValUi))
+                            newstatus = device.displayStateValUi
+                            if device.displayStateValUi == '0':
+                                newstatus = 'off'
+                            statusofDevice = newstatus
+                    return self.sendmsg_orhtml(buddy, 'Current Status of ' + device.name + ' is ' + statusofDevice, viahtml)
+                except:
+                    self.logger.exception(u'Caught Exception finding Device.')
+
+        if "comment" in content_reply:
+            return self.sendmsg_orhtml(buddy, f"{content_reply['comment']}", viahtml)
+        elif "answer" in content_reply:
+            return self.sendmsg_orhtml(buddy, f"{content_reply['answer']}", viahtml)
+        elif "question" in content_reply:
+            return self.sendmsg_orhtml(buddy, f"{content_reply['question']}", viahtml)
+
+    def generate(self, values_dict, type_id="", dev_id=None):
+        self.logger.debug("generate devices called")
+        self.chatgpt_devicedata = self.chatgpt_deviceData()
+        if self.chatgpt_deviceControl:
+            self.systemcontent = self.chatGPT_setup + self.location_Data + self.chatGPT_setup2 + "\n" + self.chatgpt_devicedata
+        else:
+            self.systemcontent = "You are a friendly, super knowledgable AI super computer that wishes to help.  You will provide as much detailed information you can on the request and be as helpful as possible." + self.location_Data
+        self.default_systemmessage =    {"role": "system", "content": self.systemcontent}    
+####
+    def num_tokens_from_messages(self, buddy, model="gpt-3.5-turbo-0301"):
+        """Returns the number of tokens used by a list of messages."""
+        # Is approx only to avoid having to many dependencies pip3 installs needed...
+        num_tokens = 0
+        for message in self.chatgpt_messages[buddy]:
+            num_tokens += 4  # every message follows <im_start>{role/name}\n{content}<im_end>\n
+            for key, value in message.items():
+                num_tokens += len(value)
+        num_tokens += 2  # every reply is primed with <im_start>assistant
+        return num_tokens / 2 ## seems more accurate
+
+    
 ######
+    def send_chatgpt(self, msg, context=None, n=None, verbose=None, buddy="Web"):
+        try:
+            openai.api_key = self.chatgpt_access_token
+            self.logger.debug(f"ChatGPT Buddy equals {buddy}" )
+
+            if buddy in self.chatgpt_messages:
+                if self.debugextra:
+                    self.logger.debug(f"Sending Background for buddy {buddy}:{self.chatgpt_messages[buddy]}")
+            else:
+                self.chatgpt_messages[buddy] = []
+                self.chatgpt_messages[buddy].append(self.default_systemmessage)
+            response = ""
+
+            if not self.use_davinci:
+                # check tokens
+                #self.logger.debug(f"Number of Tokens calculated: {self.num_tokens_from_messages(buddy)}")
+                if self.num_tokens_from_messages(buddy)> 3000:  ## use calculated only
+                    del self.chatgpt_messages[buddy][1]
+                    self.logger.debug("**** Deleting some Background, estimated given Token usage ***** ")
+                self.chatgpt_messages[buddy].append({"role": "user", "content": msg})
+                response = openai.ChatCompletion.create(
+                    model="gpt-3.5-turbo",
+                    messages=self.chatgpt_messages[buddy]
+                )
+
+            else:
+                response = openai.Completion.create(
+                    model="text-davinci-003",
+                    prompt = self.systemcontent + "\n" + msg,
+                    max_tokens = 2000
+                )
+            if self.debugextra:
+                self.logger.debug(u'Acess_Token Used:' + self.chatgpt_access_token)
+                self.logger.debug(f"Response from chatGPT:{response}")
+
+            if not self.use_davinci:
+
+                self.tokens_used = response["usage"]["total_tokens"]
+                self.logger.debug(f"Buddy {buddy} has used Total Tokens {self.tokens_used}")
+                return response["choices"][0]["message"]["content"]
+            else:
+                return response["choices"][0]["text"]
+        except:
+            self.logger.exception("Issue sending to chatGPT")
+            return ""
+
     def witai_dealwithreply(self, reply, buddy, original_message):
         if self.debugextra:
             self.logger.debug(u'witai reply given - sorting out now...')
@@ -1103,6 +1407,34 @@ class Plugin(indigo.PluginBase):
         return False
 
 #######
+    def handle_incoming(self, action, dev=None, callerWaitingForResult=None):
+        try:
+            if self.debugextra:
+                self.logger.debug(f"reflector_handler: {action.props}")
+            reply = indigo.Dict()
+
+            if action.props.get('incoming_request_method', "GET") == "POST":
+                self.logger.debug(f"POST Method found, probably from Shortcuts")
+                jsonmessage = json.loads(action.props["request_body"])
+                messagetosend = jsonmessage['msg']
+            else:
+                self.logger.debug(f"GET Method found, probably from Safari/URL/Web call")
+                #self.logger.info(f"Reflector webhook_url: {indigo.server.getReflectorURL()}/message/{self.pluginId}/webhook?api_key={self.reflector_api_key}")
+
+                messagetosend = action.props["url_query_args"]["msg"]
+
+            self.logger.info(f"Plugin URL accessed & Sending this message to chatGPT:  {messagetosend}")
+            messagereply = self.send_chatgpt(messagetosend, context=None, n=None, verbose=None, buddy="Web")
+            if self.debugextra:
+                self.logger.debug("ChatGPT Replied: "+str(messagereply))
+            response = self.chatgpt_dealwithreply(messagereply, "Web", "", True)
+
+            reply["status"] = 200
+            reply["content"] = response
+            return reply
+        except:
+            self.logger.debug("Exception with handle incoming message:",exc_info=True)
+
 
     def shutdown(self):
         if self.debugextra:
@@ -1111,6 +1443,14 @@ class Plugin(indigo.PluginBase):
     def startup(self):
         if self.debugextra:
             self.debugLog(u"Starting Plugin. startup() method called.")
+        self.logger.debug(f"Reflector Shortcut: {indigo.server.getReflectorURL()}/message/{self.pluginId}/chatGPT/sendchatGPT")
+        if self.use_chatGPT:
+            self.chatgpt_devicedata = self.chatgpt_deviceData()
+            if self.chatgpt_deviceControl:
+                self.systemcontent = self.chatGPT_setup + self.location_Data + self.chatGPT_setup2 + "\n" + self.chatgpt_devicedata
+            else:
+                self.systemcontent = "You are a friendly, super knowledgable AI super computer that wishes to help.  You will provide as much detailed information you can on the request and be as helpful as possible." + self.location_Data
+            self.default_systemmessage =  {"role": "system", "content": self.systemcontent}
 
         #self.updater = GitHubPluginUpdater(self)
 
@@ -1165,7 +1505,10 @@ class Plugin(indigo.PluginBase):
 
         valuesDict['configInfo']=''
         self.configInfo =''
-
+        self.chatgpt_access_token = valuesDict.get('chatgpt_access_token', '')
+        self.chatgpt_alldevices = valuesDict.get('chatgpt_alldevices', False)
+        self.chatgpt_deviceControl = valuesDict.get('chatgpt_deviceControl', False)
+        self.location_Data = valuesDict.get("location_Data","")
         self.logger.debug(str(valuesDict['configInfo']))
 
         if self.debugexceptions:
@@ -1861,6 +2204,90 @@ class Plugin(indigo.PluginBase):
             self.configInfo = 'upComplete'
         except:
             self.logger.exception(u'Update Code Exception Caught:')
+
+    def chatgpt_deviceData(self):
+        self.logger.debug("Updating chatGPT's understanding of all devices...")
+        array2 = "The following are a list of the only devices and ID that you are able to reply with, if unsure or not match the clarify reply should be used:\n"
+        exampledevices = ""
+        for device in indigo.devices.iter():
+            if device.enabled:
+                self.chatgpt_alldevices = False   ### Disable all devices this would be to much info,
+                if self.chatgpt_alldevices:
+                    description = str(device.description)
+                    if description != '' and (description.startswith('witai') or description.startswith('chatgpt')):
+                        # okay - just grab the first line
+                        # self.logger.debug(u'Description: String result found:'+str(description))
+                        description = description.split('\n', 1)[0]
+                        # firstline, now remove witai
+                        # self.logger.debug(u'Description: First Line only:'+str(description))
+                        if description.startswith("chatgpt"):
+                            description = description[8:]
+                        else:
+                            description = description[6:]
+                        # self.logger.debug(u'Description: New Description equals:'+str(description))
+                        # now break up by seperating on | characters
+                        synomynarray = description.split('|')
+                        # self.logger.debug(u'Description: Array now equals:'+str(synomynarray))
+
+                    devicename = str(device.name)
+                    deviceid = str(device.id)
+                    array2 = array2 + "\nDevice '" + devicename + "' has the ID:'"+deviceid+"' and is also known by :"
+                    if synomynarray:  # not empty
+                        for synomyn in synomynarray:
+                            array2 = array2 + '''"''' + synomyn + '''",'''
+                        del synomynarray[:]
+                    array2 = array2[:-1]
+
+                else:
+                    description = str(device.description)
+                    if description != '' and (description.startswith('witai') or description.startswith('chatgpt')):
+                        # okay - just grab the first line
+                        # self.logger.debug(u'Description: String result found:' + str(description))
+                        description = description.split('\n', 1)[0]
+                        # firstline, now remove witai
+                        # self.logger.debug(u'Description: First Line only:' + str(description))
+                        if description.startswith("chatgpt"):
+                            description = description[8:]
+                        else:
+                            description = description[6:]
+                        # self.logger.debug(u'Description: New Description equals:' + str(description))
+                        # now break up by seperating on | characters
+                        synomynarray = description.split('|')
+                        # .logger.debug(u'Description: Array now equals:' + str(synomynarray))
+
+                        devicename = str(device.name)
+                        deviceid = str(device.id)
+                        array2 = array2 + "\nDevice '" + devicename + "' is also known by:"
+                        if synomynarray:  # not empty
+                            for synomyn in synomynarray:
+                                array2 = array2 + '''"''' + synomyn + '''",'''
+                            del synomynarray[:]
+                        array2 = array2 + " and they all have device ID:"+deviceid
+                        #array2 = array2[:-1]
+                        #exampledevices = exampledevices + self.create_Json_example(device, synomynarray)
+
+        # array2 = json.dumps(array2)
+        self.logger.debug(str(array2))
+        self.logger.debug(f"{exampledevices}")
+        return array2 + "\n" + exampledevices
+
+    def create_Json_example(self, device, synomynarray):
+        if synomynarray:
+            devicename = random.choice(synomynarray)
+        else:
+            devicename = device.name
+        id = device.id
+        string_to_return = '''Example Command JSON Output :
+                   {  '''  + f'''
+                         "action": "command",
+                         "location": "{devicename}",
+                         "target" :"{devicename}",
+                         "ID" : {id},
+                         "value": "on",
+                         "comment": "Turning the {device.name} Lights on for you."
+        ''' + '''                   } 
+        '''
+        return string_to_return
 
     def witai_CreateApp(self):
 

@@ -2,6 +2,73 @@
 
 ![](https://github.com/Ghawken/iMessagePlugin/blob/master/DocumentPics/icon.png?raw=true)
 
+## New 0.7.0
+
+Add support for ChatGPT 3.5 turbo API usage.(Beta)
+This can be used to control indigo devices (so marked for control), like wit.ai - however it probably needs a bit of maturing before that works 100%
+
+Currently though the chatbot, chat, information, advice function via chatGPT works very well and enables easy access to chatGPT replies for whatever usage.
+Like chatGPT warning - accuracy here depends on the subject, but for natural language processing it is great.
+
+Setup:
+Get OpenAPI Key. (free with $18 usage currently included, no Credit Card details etc needed) 
+Add this to pluginConfig page.
+Enable use chatGPT functions.
+
+Other PluginConfig Options:
+
+Use Text-Davinci Engine:  Suggest this is disabled.
+
+Gpt-3.5-turbo - is x10 cheaper, and enables better history of chatting
+
+Attempt to Control Devices:
+
+Would suggest this currently is disabled - as not the greatest consistency.
+If using:
+    Like wit.ai below, need to add chatgpt at the beginnging of the Indigo device Notes field that you would like to enable control of
+    You can follow this with | and any synomyns for the devices name
+    e.g chatgpt|Upstairs Bathroom|Main Bathroom
+
+Personal Info:
+This an additional box to add information about your location, family, any details you wish to share with chatGPT to enable personalised responses
+
+### Add URL messaging support
+
+Enable accessing through Webpage - or Shortcuts App
+
+Enables:
+https://[yourreflectordetails]/message/com.GlennNZ.indigoplugin.iMessage/chatGPT/sendchatGPT
+
+to access the chatGPT setup details.
+
+Can be used with a GET in a URL:
+https://[yourreflectordetails]/message/com.GlennNZ.indigoplugin.iMessage/chatGPT/sendchatGPT?msg="Turn on Main Kitchen Light"
+
+or via a POST in Shortcuts
+Send a POST - via Get Contents of
+to:
+https://[yourreflectordetails]/message/com.GlennNZ.indigoplugin.iMessage/chatGPT/sendchatGPT
+with Headers:
+Authorization Bearer [apikey]
+with Request Body:
+msg     [msgtosend ChatGPT]
+
+(I'll update with image)
+
+
+Limitations:
+
+If using davinci will not have history or be able to function as a continuous type chatBot
+If using perferred option (gpt-turbo) and not controlling devices will save history and enable continuous flow of discussions
+(device control needs to send to much background info to enable history)
+
+Future:
+
+There are probably a number of setup options to help with Device Control that may be able to be finetuned.
+It also seems likely the chatGPT API will have sessions soon - with saving of data - this will improve a number of aspects.
+
+
+
 What it can do:
 
 - Parse and send iMessages from within Indigo

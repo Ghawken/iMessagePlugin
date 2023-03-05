@@ -30,6 +30,48 @@
     <Label>Save incoming Messages to Indigo Variable:</Label>
     <Description>Enable/Disable</Description>
   </Field>
+     <Field id="sepnewone9" type="separator"/>
+  <Field id="spacenewone120" type="label" alignText="left">
+    <Label>ChatGPT AI:</Label>
+  </Field>
+    <Field id="usechatgpt" type="checkbox" defaultValue="false" tooltip="Enabling will use ChatGPT.">
+        <Label/>
+        <Description>Use ChatGPT Processing:</Description>
+    </Field>
+    <Field id="use_davinci" type="checkbox" defaultValue="false" tooltip="Enabling will use davinci.">
+        <Label/>
+        <Description>Use Text-Davinci Engine (if disabled will use gpt-3.5-turbo):</Description>
+    </Field>
+    <Field id="chatgpt_alldevices" defaultValue="false" hidden="True" type="checkbox" tooltip="Enabling will send all devices to ChatGPT." visibleBindingId="usechatgpt" visibleBindingValue="true">
+        <Label/>
+        <Description>Use all Indigo Devices: (not really recommended)</Description>
+    </Field>
+        <Field id="chatgpt_deviceControl" defaultValue="false" type="checkbox" tooltip="Enabling will enable control of devices." visibleBindingId="usechatgpt" visibleBindingValue="true">
+        <Label>Enable below to attempt to use device control with ChatGPT.
+            Need to setup devices to be controlled by edit notes fields as below.</Label>
+        <Description>Attempt to control Devices:</Description>
+    </Field>
+
+          <Field id="spacenewone2ae3" type="label" fontSize="small" fontColor="black" visibleBindingId="usechatgpt" visibleBindingValue="true" >
+    <Label>
+        For devices to be setup, the below needs to be added to each devices Notes page in Indigo.
+        Followed by Synonyms:
+        eg.        chatgpt|Main Light|Main Lamp|Living Room Main Lamp
+    </Label>
+          </Field>
+   <Field id="chatgpt_access_token" type="textfield" defaultValue="" tooltip="chatgpt Access Token" dynamicreload="true" visibleBindingId="usechatgpt" visibleBindingValue="true" >
+    <Label>OpenAI ChatGPT Access Token:</Label>
+  </Field>
+			<Field id="save" type="button"  alignWithControl="true" fontSize="large" fontColor="red" >
+				<Label>Click Here to (re)Generate chatGPT Devices: </Label>
+				<Title>Generate Devices</Title>
+				<CallbackMethod>generate</CallbackMethod>
+			</Field>
+   <Field id="location_Data" type="textfield" defaultValue="" tooltip="chatgpt Access Token" dynamicreload="true" visibleBindingId="usechatgpt" visibleBindingValue="true" >
+    <Label>Additional Personal Data for ChatGPT:</Label>
+
+
+  </Field>
  <Field id="sep9" type="separator"/>
   <Field id="space120" type="label" alignText="left">
     <Label>Wit.Ai AI:</Label>
