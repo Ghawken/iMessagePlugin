@@ -32,6 +32,11 @@ If using:
 Personal Info:
 This an additional box to add information about your location, family, any details you wish to share with chatGPT to enable personalised responses
 
+So Basically if enabled:
+WHen you allowed buddies send a message to indigo (if not a trigger) this will be parsed to chatGPT to answer for you.
+Each buddy has an independent history that chatGPT recalls and can continue, tell me more? for example.
+
+
 ### Add URL messaging support
 
 Enable accessing through Webpage - or Shortcuts App

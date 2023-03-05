@@ -512,7 +512,7 @@ Your response should always be the JSON and no other text, regardless of categor
     def as_sendmessage(self, imsgUser, imsgMessage):
         if self.debugextra:
             self.debugLog(u"as_sendmessage() method called.")
-            self.logger.debug(u'Sending iMsg:'+str(imsgMessage)+u' to Buddy/User:'+str(imsgUser))
+            self.logger.debug(f'Sending iMsg:'+{imsgMessage}+' to Buddy/User:'+str(imsgUser))
 
         if self.systemVersion >=20:
             ascript_string = '''
@@ -532,10 +532,14 @@ Your response should always be the JSON and no other text, regardless of categor
                 send sendThis to theBuddy
             end tell
             '''
-        my_ascript_from_string = applescript.AppleScript(source=ascript_string)
-        reply = my_ascript_from_string.run()
-        if self.debugextra:
-            self.logger.debug(u'AppleScript Reply:'+str(reply))
+        try:
+            my_ascript_from_string = applescript.AppleScript(source=ascript_string)
+            reply = my_ascript_from_string.run()
+            if self.debugextra:
+                self.logger.debug(u'AppleScript Reply:'+str(reply))
+        except:
+            self.logger.debug(f"An exception was caught with this applescript string {ascript_string}", exc_info=True)
+
 
     def as_sendgroupmessage(self, imsgUser, imsgMessage):  ## not used... revisit now with Big Sur
         if self.debugextra:
@@ -958,8 +962,14 @@ Your response should always be the JSON and no other text, regardless of categor
         if viahtml or buddy=="Web":
             return message
         else:
-            message.replace('"','\\"')        ## scape them instead may stil fail
-           # message.replace("\"","'")         ## delete all quotes - leave single ones
+            #message = json.dumps(message)
+           #     message.replace('"','\"')        ## scape them instead may stil fail
+            message = message.replace('"',"'")
+            message = message.replace('“','')
+
+            if self.debugextra:
+                self.logger.info(f"New Message =\n {message}")
+            # ## delete all quotes - leave single ones
             self.as_sendmessage(buddy,message)
             return
 
@@ -1006,7 +1016,7 @@ Your response should always be the JSON and no other text, regardless of categor
         except:
             self.logger.debug(f"Exception with Json, likely misformed or json.")
             newreply = "{"+ reply[reply.find("{") + 1:reply.find("}")] + "}"
-            newreply.replace("'","")
+            #newreply.replace("'","")
             if self.debugextra:
                 self.logger.debug(f"New Reply:\n{newreply}")
             try:
