@@ -512,7 +512,7 @@ Your response should always be the JSON and no other text, regardless of categor
     def as_sendmessage(self, imsgUser, imsgMessage):
         if self.debugextra:
             self.debugLog(u"as_sendmessage() method called.")
-            self.logger.debug(f'Sending iMsg:'+{imsgMessage}+' to Buddy/User:'+str(imsgUser))
+            self.logger.debug(f'Sending iMsg:{imsgMessage} to Buddy/User:'+str(imsgUser))
 
         if self.systemVersion >=20:
             ascript_string = '''
