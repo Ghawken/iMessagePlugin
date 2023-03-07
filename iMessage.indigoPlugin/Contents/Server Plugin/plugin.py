@@ -157,7 +157,7 @@ Your response should always be the JSON and no other text, regardless of categor
 
         self.messages = []
         self.chatgpt_messages = {}
-        self.default_systemmessage = {"role": "system", "content": "Super friendly AI Smart home"}  # should be overridden.
+        self.default_systemmessage = [{"role": "system", "content": "Super friendly AI Smart home"} ] # should be overridden.
         MAChome = os.path.expanduser("~") + "/"
         folderLocation = MAChome + "Pictures/Indigo-iMessagePlugin/"  ## change to Pictures as Documents locked down and iMessage AZpp can't access
 
@@ -965,7 +965,8 @@ Your response should always be the JSON and no other text, regardless of categor
             else:
                  self.logger.error(f"Sending Message to Buddy = {buddy} who doesn't exist.  Shouldn't happen.  Fixing.")
                  self.chatgpt_messages[buddy] = []
-                 self.chatgpt_messages[buddy].append(self.default_systemmessage)
+                 self.chatgpt_messages[buddy].append({"role": "system", "content": "The current data and time is:" + str(self.return_datetime())})
+                 self.chatgpt_messages[buddy] = self.chatgpt_messages[buddy] + self.default_systemmessage
                  self.chatgpt_messages[buddy].append({"role": "assistant", "content":message})
         
         if viahtml or buddy=="Web":
@@ -1116,11 +1117,13 @@ Your response should always be the JSON and no other text, regardless of categor
         if self.use_chatGPT:
             self.chatgpt_devicedata = self.chatgpt_deviceData()
             if self.chatgpt_deviceControl:
-                self.systemcontent = self.chatGPT_setup + self.chatGPT_setup2 + self.location_Data +  "\n" + self.chatgpt_devicedata
+                self.systemcontent = self.chatGPT_setup
+                usersetup = self.chatGPT_setup + self.chatGPT_setup2 + self.location_Data +  "\n" + self.chatgpt_devicedata
             else:
-                self.systemcontent = self.chatGPT_setup + self.location_Data
-
-            self.default_systemmessage =  {"role": "system", "content": self.systemcontent}
+                self.systemcontent = self.chatGPT_setup
+                usersetup = self.chatGPT_setup + self.location_Data
+## For some reason chatGPT doesn't listen to system role as much as user role.  Repeat one and then redo in user.
+            self.default_systemmessage = [ {"role": "system", "content": self.systemcontent},{"role": "user", "content": self.systemcontent}]
 
 ####
     def num_tokens_from_messages(self, buddy, model="gpt-3.5-turbo-0301"):
@@ -1149,15 +1152,15 @@ Your response should always be the JSON and no other text, regardless of categor
             return ""
 ######
     def delete_messages(self,buddy):
-        self.logger.debug(f"Check Delete messages called for buddy {buddy}")
-        tokensused = self.num_tokens_from_messages(buddy)
 
+        tokensused = self.num_tokens_from_messages(buddy)
+        self.logger.debug(f"Check Delete messages called for buddy {buddy} and tokensused {tokensused}")
         # don't save user questions - can't without going over to quickly
         while self.num_tokens_from_messages(buddy) >5000:
-            if len(self.chatgpt_messages[buddy]) >=3:
+            if len(self.chatgpt_messages[buddy]) >=4:
                 if self.debugextra:
-                    self.logger.debug(f"Deleting Messages {self.chatgpt_messages[buddy][3]}")
-                    del self.chatgpt_messages[buddy][3]  #System is 0,1 - user info, is 2, 3 is user/4 assistant - delete both
+                    self.logger.debug(f"Deleting Messages {self.chatgpt_messages[buddy][4]}")
+                    del self.chatgpt_messages[buddy][4]  #System is 0,1 - user info, is 2, 3 is user/4 assistant - delete both
                     #self.logger.info(f"Deleted Messages Tokens Now: {self.num_tokens_from_messages(buddy)}")
             else:
                 self.logger.error("This is a major error, someone all tokens have been used with only the system requests... Please update")
@@ -1182,7 +1185,7 @@ Your response should always be the JSON and no other text, regardless of categor
             else:
                 self.chatgpt_messages[buddy] = []
                 self.chatgpt_messages[buddy].append({"role": "system", "content": "The current data and time is:"+str(self.return_datetime())})
-                self.chatgpt_messages[buddy].append(self.default_systemmessage)
+                self.chatgpt_messages[buddy] = self.chatgpt_messages[buddy] + self.default_systemmessage
                 try:
                     personaldata = self.add_buddydata(buddy)
                     if personaldata !="":
@@ -1196,8 +1199,6 @@ Your response should always be the JSON and no other text, regardless of categor
                 # check tokens
                 #self.logger.debug(f"Number of Tokens calculated: {self.num_tokens_from_messages(buddy)}")
                 self.delete_messages(buddy)
-
-
                 self.chatgpt_messages[buddy][0] = {"role": "system", "content": "The current data and time is:"+str(self.return_datetime())}
                 self.chatgpt_messages[buddy].append({"role": "user", "content": msg})
                 response = openai.ChatCompletion.create(
@@ -1511,13 +1512,14 @@ Your response should always be the JSON and no other text, regardless of categor
         if self.debugextra:
             self.debugLog(u"Starting Plugin. startup() method called.")
         self.logger.debug(f"Reflector Shortcut: {indigo.server.getReflectorURL()}/message/{self.pluginId}/chatGPT/sendchatGPT")
-        if self.use_chatGPT:
-            self.chatgpt_devicedata = self.chatgpt_deviceData()
-            if self.chatgpt_deviceControl:
-                self.systemcontent = self.chatGPT_setup + self.chatGPT_setup2 + self.location_Data +  "\n" + self.chatgpt_devicedata
-            else:
-                self.systemcontent = self.chatGPT_setup + self.location_Data
-            self.default_systemmessage =  {"role": "system", "content": self.systemcontent}
+        self.generate(","",""")
+        # if self.use_chatGPT:
+        #     self.chatgpt_devicedata = self.chatgpt_deviceData()
+        #     if self.chatgpt_deviceControl:
+        #         self.systemcontent = self.chatGPT_setup + self.chatGPT_setup2 + self.location_Data +  "\n" + self.chatgpt_devicedata
+        #     else:
+        #         self.systemcontent = self.chatGPT_setup + self.location_Data
+        #     self.default_systemmessage =  {"role": "system", "content": self.systemcontent}
 
         #self.updater = GitHubPluginUpdater(self)
 
