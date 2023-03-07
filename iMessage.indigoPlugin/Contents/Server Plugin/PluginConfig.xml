@@ -72,6 +72,17 @@
 
 
   </Field>
+       <Field id="buddy_chatgpt" type="textfield" defaultValue="" tooltip="chatgpt Access Token" dynamicreload="true" visibleBindingId="usechatgpt" visibleBindingValue="true" >
+    <Label>Data for each Buddy for ChatGPT:</Label>
+
+
+  </Field>
+    <Field id="spaceanewone2ae3" type="label" fontSize="small" fontColor="black" visibleBindingId="usechatgpt" visibleBindingValue="true" >
+    <Label>
+        Data to inform ChatGPT regarding specific buddys it may be conversing wife.  Set as specific system setup, can alter personality or nature of replies for each buddy
+        eg.        buddyname|Bob.  Interested in Building and Trucks|buddyname2|Wife of Bob
+    </Label>
+          </Field>
  <Field id="sep9" type="separator"/>
   <Field id="space120" type="label" alignText="left">
     <Label>Wit.Ai AI:</Label>
