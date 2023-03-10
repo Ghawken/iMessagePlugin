@@ -24,6 +24,7 @@ import subprocess
 import platform
 
 import openai
+import openai.error
 import re
 import random
 import datetime
@@ -1163,7 +1164,7 @@ Your response should always be the JSON and no other text, regardless of categor
                     del self.chatgpt_messages[buddy][4]  #System is 0,1 - user info, is 2, 3 is user/4 assistant - delete both
                     #self.logger.info(f"Deleted Messages Tokens Now: {self.num_tokens_from_messages(buddy)}")
             else:
-                self.logger.error("This is a major error, someone all tokens have been used with only the system requests... Please update")
+                self.logger.error("This is a major error, somehow all tokens have been used with only the system requests... Please update")
                 break
         ## probably can just check 3 and 4th message
         if self.debugextra:
@@ -1177,7 +1178,7 @@ Your response should always be the JSON and no other text, regardless of categor
     def send_chatgpt(self, msg, context=None, n=None, verbose=None, buddy="Web"):
         try:
             openai.api_key = self.chatgpt_access_token
-            self.logger.debug(f"ChatGPT Buddy equals {buddy}" )
+            self.logger.debug(f"send_chatgpt ChatGPT Buddy equals {buddy}" )
 
             if buddy in self.chatgpt_messages:
                 if self.debugextra:
@@ -1215,14 +1216,49 @@ Your response should always be the JSON and no other text, regardless of categor
             if self.debugextra:
                 self.logger.debug(u'Acess_Token Used:' + self.chatgpt_access_token)
                 self.logger.debug(f"Response from chatGPT:{response}")
-
             if not self.use_davinci:
-
                 self.tokens_used = response["usage"]["total_tokens"]
                 self.logger.debug(f"Buddy {buddy} has used Total Tokens {self.tokens_used}")
                 return response["choices"][0]["message"]["content"]
             else:
                 return response["choices"][0]["text"]
+
+        except openai.error.Timeout as e:
+            # Handle timeout error, e.g. retry or log
+            self.logger.info(f"OpenAPI timed out {e}")
+            return f"The request timed out. Please try again later"
+        except openai.error.APIError as e:
+            # Handle API error, e.g. retry or log
+            self.logger.info(f"OpenAI API returned an API Error: {e}")
+            return f"Failed as returned an API Error:"
+
+        except openai.error.APIConnectionError as e:
+            # Handle connection error, e.g. check network or log
+            self.logger.info( f"Request failed to connect")
+            return f"I failed to connect, this request failed : {e}"
+
+        except openai.error.InvalidRequestError as e:
+            # Handle invalid request error, e.g. validate parameters or log
+            self.logger.info(f"OpenAI API request was invalid: {e}")
+            return f"This request was invalid."
+
+        except openai.error.AuthenticationError as e:
+            # Handle authentication error, e.g. check credentials or log
+            self.logger.info(f"OpenAI API request was not authorized: {e}")
+            return f"This request was not authorized:"
+
+        except openai.error.PermissionError as e:
+            # Handle permission error, e.g. check scope or log
+            self.logger.info(f"OpenAI API request was not permitted: {e}")
+            return f"There was a permission error and this request was not permitted"
+
+        except openai.error.RateLimitError as ex:
+            self.logger.info(f"ChatGPT hit Rate Limit: {ex}")
+            return "Rate Limit hit, please try again in a bit"
+
+        except openai.error.ServiceUnavailableError as ex:
+            self.logger.info(f"ChatGPT hit Service Unavailable Error :{ex}")
+            return "Service Unavailable, please try again in a bit"
         except:
             self.logger.exception("Issue sending to chatGPT")
             return ""
