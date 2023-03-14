@@ -38,6 +38,14 @@
         <Label/>
         <Description>Use ChatGPT Processing:</Description>
     </Field>
+      <Field id="allowed_chatGPTBuddies" type="textfield" alighwithControl="true" defaultValue="" alignText="left" tooltip="Allowed buddies to communicate with service [comma separated]">
+    <Label>ChatGPT Allowed Buddy List:</Label>
+  </Field>
+
+       <Field id="chatgpt_access_token" type="textfield" defaultValue="" tooltip="chatgpt Access Token" dynamicreload="true" visibleBindingId="usechatgpt" visibleBindingValue="true" >
+    <Label>OpenAI ChatGPT Access Token:</Label>
+  </Field>
+
     <Field id="use_davinci" type="checkbox" defaultValue="false" tooltip="Enabling will use davinci.">
         <Label/>
         <Description>Use Text-Davinci Engine (if disabled will use gpt-3.5-turbo):</Description>
@@ -59,9 +67,7 @@
         eg.        chatgpt|Main Light|Main Lamp|Living Room Main Lamp
     </Label>
           </Field>
-   <Field id="chatgpt_access_token" type="textfield" defaultValue="" tooltip="chatgpt Access Token" dynamicreload="true" visibleBindingId="usechatgpt" visibleBindingValue="true" >
-    <Label>OpenAI ChatGPT Access Token:</Label>
-  </Field>
+
 			<Field id="save" type="button"  alignWithControl="true" fontSize="large" fontColor="red" >
 				<Label>Click Here to (re)Generate chatGPT Devices: </Label>
 				<Title>Generate Devices</Title>

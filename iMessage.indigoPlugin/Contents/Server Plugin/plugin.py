@@ -185,6 +185,7 @@ Your response should always be the JSON and no other text, regardless of categor
 
         self.app_id = self.pluginPrefs.get('app_id','')
         self.allowedBuddies = self.pluginPrefs.get('allowedBuddies','')
+        self.allowed_chatGPTBuddies = self.pluginPrefs.get('allowed_chatGPTBuddies', '')
         self.prefServerTimeout = int(self.pluginPrefs.get('configMenuServerTimeout', "15"))
         #self.configUpdaterInterval = self.pluginPrefs.get('configUpdaterInterval', 24)
        # self.configUpdaterForceUpdate = self.pluginPrefs.get('configUpdaterForceUpdate', False)
@@ -276,6 +277,7 @@ Your response should always be the JSON and no other text, regardless of categor
             self.showBuddies = valuesDict.get('showBuddies', False)
             self.saveVariables = valuesDict.get('saveVariable', False)
             self.allowedBuddies = valuesDict.get('allowedBuddies', '')
+            self.allowed_chatGPTBuddies = valuesDict.get('allowed_chatGPTBuddies', '')
             self.openStore = valuesDict.get('openStore', False)
             self.logger.debug(u"logLevel = " + str(self.logLevel))
             self.logger.debug(u"User prefs saved.")
@@ -674,6 +676,11 @@ Your response should always be the JSON and no other text, regardless of categor
                     self.logger.debug(u'Passed against allowed Buddies: ' + str(messages))
                     self.logger.debug(u'Allowed Buddies Equal:'+str(self.allowedBuddies))
                     self.logger.debug(u'Received Buddy equals:'+str(key))
+            elif key in self.allowed_chatGPTBuddies:
+                if self.debugextra:
+                    self.logger.debug(u'Passed against allowed chatGPT Buddies: ' + str(messages))
+                    self.logger.debug(u'Allowed Buddies Equal:'+str(self.allowed_chatGPTBuddies))
+                    self.logger.debug(u'Received Buddy equals:'+str(key))
             else:
                 if self.debugextra:
                     self.logger.debug(u'Message Received - but buddyhandle not allowed; Handled received equals:'+str(key))
@@ -735,7 +742,7 @@ Your response should always be the JSON and no other text, regardless of categor
             self.lastBuddy = key
             if self.saveVariables:
                 self.updateVar(key, val.lower())
-            if self.triggerCheck(key, 'commandReceived', val.lower() ):
+            if self.triggerCheck(key, 'commandReceived', val.lower() ) and key in self.allowedBuddies:  ## remove chatGPT buddies from here
                 self.resetLastCommand = t.time()+120
                 messages.pop(key, None)
                 if self.debugextra:
@@ -760,7 +767,7 @@ Your response should always be the JSON and no other text, regardless of categor
                     else:
                         self.resetLastCommand = t.time() +120
                         if self.debugextra:
-                            self.logger.debug(u'-- Message was not recognised as Trigger - sending to Wit.Ai for processing --')
+                            self.logger.debug(u'-- Message was not recognised as Trigger - sending to AI for processing --')
 
                         reply = self.wit_message(val,context=None, n=None,verbose=None)
                         messages.pop(key, None)
@@ -784,7 +791,7 @@ Your response should always be the JSON and no other text, regardless of categor
                     else:
                         self.resetLastCommand = t.time() +120
                         if self.debugextra:
-                            self.logger.debug(u'-- Message was not recognised as Trigger - sending to Wit.Ai for processing --')
+                            self.logger.debug(u'-- Message was not recognised as Trigger - sending to  chatGPT API for processing --')
 
                         reply = self.send_chatgpt(val,context=None, n=None,verbose=None, buddy=key)
 
