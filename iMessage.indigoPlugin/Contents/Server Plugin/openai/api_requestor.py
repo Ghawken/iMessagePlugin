@@ -521,6 +521,7 @@ class APIRequestor:
                 files=files,
                 stream=stream,
                 timeout=request_timeout if request_timeout else TIMEOUT_SECS,
+                proxies=_thread_context.session.proxies,
             )
         except requests.exceptions.Timeout as e:
             raise error.Timeout("Request timed out: {}".format(e)) from e
@@ -666,7 +667,10 @@ class APIRequestor:
                 headers=rheaders,
             )
         try:
-            data = json.loads(rbody)
+            if 'text/plain' in rheaders.get('Content-Type'):
+                data = rbody
+            else:
+                data = json.loads(rbody)
         except (JSONDecodeError, UnicodeDecodeError) as e:
             raise error.APIError(
                 f"HTTP code {rcode} from API ({rbody})", rbody, rcode, headers=rheaders
