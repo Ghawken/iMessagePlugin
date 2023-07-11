@@ -1209,8 +1209,9 @@ Your response should always be the JSON and no other text, regardless of categor
                 self.delete_messages(buddy)
                 self.chatgpt_messages[buddy][0] = {"role": "system", "content": "The current data and time is:"+str(self.return_datetime())}
                 self.chatgpt_messages[buddy].append({"role": "user", "content": msg})
+
                 response = openai.ChatCompletion.create(
-                    model="gpt-3.5-turbo",
+                    model="gpt-4-0613",
                     messages=self.chatgpt_messages[buddy]
                 )
 
