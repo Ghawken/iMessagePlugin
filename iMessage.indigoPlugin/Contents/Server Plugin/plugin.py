@@ -1170,7 +1170,7 @@ Your response should always be the JSON and no other text, regardless of categor
             # don't save user questions - can't without going over to quickly
             checks = 0
             while checks <=30:
-                if self.num_tokens_from_messages(buddy) >5000:
+                if self.num_tokens_from_messages(buddy) >8000:   #TODO Make user selectable in pluginConfig
                     if len(self.chatgpt_messages[buddy]) >=4:
                         if self.debugextra:
                             self.logger.debug(f"Deleting Messages {self.chatgpt_messages[buddy][4]}")
@@ -1221,8 +1221,10 @@ Your response should always be the JSON and no other text, regardless of categor
                 self.chatgpt_messages[buddy][0] = {"role": "system", "content": "The current data and time is:"+str(self.return_datetime())}
                 self.chatgpt_messages[buddy].append({"role": "user", "content": msg})
 
+           #     self.logger.error(f"Models:\n{openai.Model.list()}")  ## TODO make model user selectable in PluginConfig
+
                 response = openai.ChatCompletion.create(
-                    model="gpt-3.5-turbo",
+                    model="gpt-3.5-turbo-16k-0613",
                     messages=self.chatgpt_messages[buddy]
                 )
 
