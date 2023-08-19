@@ -1137,13 +1137,17 @@ Your response should always be the JSON and no other text, regardless of categor
     def num_tokens_from_messages(self, buddy, model="gpt-3.5-turbo-0301"):
         """Returns the number of tokens used by a list of messages."""
         # Is approx only to avoid having to many dependencies pip3 installs needed...
-        num_tokens = 0
-        for message in self.chatgpt_messages[buddy]:
-            num_tokens += 4  # every message follows <im_start>{role/name}\n{content}<im_end>\n
-            for key, value in message.items():
-                num_tokens += len(value)
-        num_tokens += 2  # every reply is primed with <im_start>assistant
-        return num_tokens / 2 ## seems more accurate
+        try:
+            num_tokens = 0
+            for message in self.chatgpt_messages[buddy]:
+                num_tokens += 4  # every message follows <im_start>{role/name}\n{content}<im_end>\n
+                for key, value in message.items():
+                    num_tokens += len(value)
+            num_tokens += 2  # every reply is primed with <im_start>assistant
+            return num_tokens / 2 ## seems more accurate
+        except:
+            self.logger.exception(f"Exception in num tokens")
+            return 0
 
     def add_buddydata(self, buddy):
         try:
@@ -1160,22 +1164,29 @@ Your response should always be the JSON and no other text, regardless of categor
             return ""
 ######
     def delete_messages(self,buddy):
-
-        tokensused = self.num_tokens_from_messages(buddy)
-        self.logger.debug(f"Check Delete messages called for buddy {buddy} and tokensused {tokensused}")
-        # don't save user questions - can't without going over to quickly
-        while self.num_tokens_from_messages(buddy) >5000:
-            if len(self.chatgpt_messages[buddy]) >=4:
-                if self.debugextra:
-                    self.logger.debug(f"Deleting Messages {self.chatgpt_messages[buddy][4]}")
-                    del self.chatgpt_messages[buddy][4]  #System is 0,1 - user info, is 2, 3 is user/4 assistant - delete both
-                    #self.logger.info(f"Deleted Messages Tokens Now: {self.num_tokens_from_messages(buddy)}")
-            else:
-                self.logger.error("This is a major error, somehow all tokens have been used with only the system requests... Please update")
-                break
-        ## probably can just check 3 and 4th message
-        if self.debugextra:
-            self.logger.debug(f"{buddy}'s messages now = \n{self.chatgpt_messages[buddy]}")
+        try:
+            tokensused = self.num_tokens_from_messages(buddy)
+            self.logger.debug(f"Check Delete messages called for buddy {buddy} and tokensused {tokensused}")
+            # don't save user questions - can't without going over to quickly
+            checks = 0
+            while checks <=30:
+                if self.num_tokens_from_messages(buddy) >5000:
+                    if len(self.chatgpt_messages[buddy]) >=4:
+                        if self.debugextra:
+                            self.logger.debug(f"Deleting Messages {self.chatgpt_messages[buddy][4]}")
+                            del self.chatgpt_messages[buddy][4]  #System is 0,1 - user info, is 2, 3 is user/4 assistant - delete both
+                            #self.logger.info(f"Deleted Messages Tokens Now: {self.num_tokens_from_messages(buddy)}")
+                    else:
+                        self.logger.error("This is a major error, somehow all tokens have been used with only the system requests... Please update")
+                        checks = 50
+                else:
+                    checks = 50 #done
+                checks = checks +1
+            ## probably can just check 3 and 4th message
+            if self.debugextra:
+                self.logger.debug(f"{buddy}'s messages now = \n{self.chatgpt_messages[buddy]}")
+        except:
+            self.logger.exception(f"Exception in check delete messages..")
 
     def return_datetime(self):
         now = datetime.datetime.now()
@@ -1211,7 +1222,7 @@ Your response should always be the JSON and no other text, regardless of categor
                 self.chatgpt_messages[buddy].append({"role": "user", "content": msg})
 
                 response = openai.ChatCompletion.create(
-                    model="gpt-4-0613",
+                    model="gpt-3.5-turbo",
                     messages=self.chatgpt_messages[buddy]
                 )
 
