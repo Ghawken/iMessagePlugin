@@ -423,7 +423,6 @@ Your response should always be the JSON and no other text, regardless of categor
         # if self.debugextra:
         #     self.debugLog(u"fetch messages() method called.")
         cursor = self.connection.cursor()
-
         if self.systemVersion >=17:
             sqlcommand = '''
     SELECT attachmentT.filename FROM message messageT INNER JOIN attachment attachmentT INNER JOIN message_attachment_join meAtJoinT ON attachmentT.ROWID= meAtJoinT.attachment_id WHERE meAtJoinT.message_id=messageT.ROWID
@@ -451,7 +450,16 @@ Your response should always be the JSON and no other text, regardless of categor
         cursor = self.connection.cursor()
 
         #below is needed for older than Mojave
-        if self.systemVersion >=17:
+        if self.systemVersion >=22:
+            sqlcommand = '''
+             SELECT handle.id, HEX(message.attributedbody), message.is_audio_message
+               FROM message INNER JOIN handle 
+               ON message.handle_id = handle.ROWID 
+               WHERE is_from_me=0 AND 
+               datetime(message.date/1000000000 + strftime("%s", "2001-01-01") ,"unixepoch","localtime") >= datetime('now','-10 seconds', 'localtime')
+               ORDER BY message.date ASC;      
+             '''
+        elif self.systemVersion >=17:
             sqlcommand = '''
               SELECT handle.id, message.text, message.is_audio_message
                 FROM message INNER JOIN handle 
