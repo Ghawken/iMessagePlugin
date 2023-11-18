@@ -28,6 +28,7 @@ import openai.error
 import re
 import random
 import datetime
+import typedstream
 
 try:
     import indigo
@@ -448,7 +449,7 @@ Your response should always be the JSON and no other text, regardless of categor
        # if self.debugextra:
        #     self.debugLog(u"fetch messages() method called.")
         cursor = self.connection.cursor()
-
+        using_attributedBody = False
         #below is needed for older than Mojave
         if self.systemVersion >=22:
             sqlcommand = '''
@@ -459,6 +460,7 @@ Your response should always be the JSON and no other text, regardless of categor
                datetime(message.date/1000000000 + strftime("%s", "2001-01-01") ,"unixepoch","localtime") >= datetime('now','-10 seconds', 'localtime')
                ORDER BY message.date ASC;      
              '''
+            using_attributedBody = True
         elif self.systemVersion >=17:
             sqlcommand = '''
               SELECT handle.id, message.text, message.is_audio_message
@@ -496,16 +498,38 @@ Your response should always be the JSON and no other text, regardless of categor
             return dict()
         else:
             if self.debugextra:
-                self.logger.debug(u'sql_fetchmessages: Not empty return:' + str(result))
-
+                self.logger.debug(u'sql_fetchmessages: Not empty return:\n' + str(result))
+                self.logger.debug(f"Type result {type(result)}")
             newlist = []
-            for items in result:
+            result_list = map(list, result)
+            if self.debugextra:
+                self.logger.debug(u'Convert to List of Lists\n' + str(result_list))
+
+            for items in result_list:
+                ## Given Ventura and Sonoma now uses messsage.attributedBody to save text as a Archive NSString.
+                ## Yikes.
                 if items[2]==1:
                     self.logger.debug(u'Must be audio file...')
-                    newtuple = items[0], 'AUDIOFILE'
+                    newtuple = [items[0], 'AUDIOFILE']
                     newlist.append(newtuple)
                 else:
-                    newtuple = items[0], items[1]
+                    if using_attributedBody:
+                        ## Need to read and convert the Hex NSString archived object back to Text
+                        try:
+                            bytes_data = bytes.fromhex(items[1])
+                            self.logger.debug(f"Using Attributed Body iMsg - thank you Apple.")
+                            self.logger.debug(f"Converted Bytes_data {bytes_data}")
+                            data = typedstream.unarchive_from_data(bytes_data)
+                            if self.debugextra:
+                                self.logger.debug(f"Extracted NSString archive: \n {data.contents}")
+                                self.logger.debug(f"Message: == {data.contents[0].value.value}")
+                            message = data.contents[0].value.value
+                            items[1] = str(message)
+                        except:
+                            self.logger.exception("Exception unpacked NSString message.attributedbody")
+                            pass
+
+                    newtuple = [items[0], items[1]]
                     newlist.append(newtuple)
 
             self.logger.debug(u'newlist after checking audio file:'+str(newlist))
