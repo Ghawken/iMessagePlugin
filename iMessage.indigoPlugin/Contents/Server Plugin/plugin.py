@@ -1074,10 +1074,9 @@ Your response should always be the JSON and no other text, regardless of categor
             except:
                 if self.debugextra:
                     self.logger.debug(f"Still exception with this {newreply}, maybe plain text try that..")
-                if '{' not in reply:
-                    self.logger.debug(f"No Json brackets found, sending reply as plain text.")
-                    return self.sendmsg_orhtml(buddy, f"{reply}", viahtml)
-                return
+                self.logger.debug(f"No Json brackets found, sending reply as plain text.")
+                return self.sendmsg_orhtml(buddy, f"{reply}", viahtml)
+
 
         #elf.logger.debug(f"json_reply:\n{content_reply}")
 
@@ -1252,12 +1251,13 @@ Your response should always be the JSON and no other text, regardless of categor
             self.chatgpt_messages[buddy][0] = {"role": "system", "content": "The current data and time is:"+str(self.return_datetime())}
             self.chatgpt_messages[buddy].append({"role": "user", "content": msg})
 
-            #self.logger.error(f"Models:\n{openai.Model.list()}")  ## TODO make model user selectable in PluginConfig
-
             response = openai.ChatCompletion.create(
                 model=self.chatgpt_models,
                 messages=self.chatgpt_messages[buddy]
             )
+
+            if self.debugextra:
+                self.logger.debug(f"Response:\n {response}")
 
 
             self.tokens_used = response["usage"]["total_tokens"]
