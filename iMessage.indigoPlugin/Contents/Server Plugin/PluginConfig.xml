@@ -45,11 +45,11 @@
        <Field id="chatgpt_access_token" type="textfield" defaultValue="" tooltip="chatgpt Access Token" dynamicreload="true" visibleBindingId="usechatgpt" visibleBindingValue="true" >
     <Label>OpenAI ChatGPT Access Token:</Label>
   </Field>
-
-    <Field id="use_davinci" type="checkbox" defaultValue="false" tooltip="Enabling will use davinci.">
-        <Label/>
-        <Description>Use Text-Davinci Engine (if disabled will use gpt-3.5-turbo):</Description>
+    <Field id="chatgpt_model" type="menu" defaultValue="gpt-3.5-turbo-16k" tooltip="Select ChatGPT Model to use (if available)" visibleBindingId="usechatgpt" visibleBindingValue="true">
+        <Label>ChatGPT Model:</Label>
+       <List class="self" method="modellist_generator" dynamicReload="true"/>
     </Field>
+
     <Field id="chatgpt_alldevices" defaultValue="false" hidden="True" type="checkbox" tooltip="Enabling will send all devices to ChatGPT." visibleBindingId="usechatgpt" visibleBindingValue="true">
         <Label/>
         <Description>Use all Indigo Devices: (not really recommended)</Description>

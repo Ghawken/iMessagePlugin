@@ -145,7 +145,7 @@ Your response should always be the JSON and no other text, regardless of categor
         self.openStore = self.pluginPrefs.get('openStore', False)
         self.use_witAi = self.pluginPrefs.get('usewit_Ai', False)
         self.use_chatGPT = self.pluginPrefs.get('usechatgpt', False)
-        self.use_davinci = self.pluginPrefs.get('use_davinci', False)
+        self.chatgpt_models = self.pluginPrefs.get('chatgpt_model', "gpt-3.5-turbo")
         self.configInfo =''
         self.wit_alldevices = self.pluginPrefs.get('wit_alldevices', False)
         self.chatgpt_alldevices = self.pluginPrefs.get('chatgpt_alldevices', False)
@@ -273,7 +273,7 @@ Your response should always be the JSON and no other text, regardless of categor
             self.wit_alldevices = valuesDict.get('wit_alldevices', False)
             self.use_witAi = valuesDict.get('usewit_Ai', False)
             self.use_chatGPT = valuesDict.get('usechatgpt', False)
-            self.use_davinci = valuesDict.get("use_davinci", False)
+            self.chatgpt_models = self.pluginPrefs.get('chatgpt_model', "gpt-3.5-turbo")
             self.indigo_log_handler.setLevel(self.logLevel)
             self.showBuddies = valuesDict.get('showBuddies', False)
             self.saveVariables = valuesDict.get('saveVariable', False)
@@ -1166,7 +1166,7 @@ Your response should always be the JSON and no other text, regardless of categor
             self.default_systemmessage = [ {"role": "system", "content": self.systemcontent},{"role": "user", "content": self.systemcontent}]
 
 ####
-    def num_tokens_from_messages(self, buddy, model="gpt-3.5-turbo-0301"):
+    def num_tokens_from_messages(self, buddy):
         """Returns the number of tokens used by a list of messages."""
         # Is approx only to avoid having to many dependencies pip3 installs needed...
         try:
@@ -1246,35 +1246,23 @@ Your response should always be the JSON and no other text, regardless of categor
                     self.logger.exception("Caught exception with add_buddy data")
             response = ""
 
-            if not self.use_davinci:
-                # check tokens
-                #self.logger.debug(f"Number of Tokens calculated: {self.num_tokens_from_messages(buddy)}")
-                self.delete_messages(buddy)
-                self.chatgpt_messages[buddy][0] = {"role": "system", "content": "The current data and time is:"+str(self.return_datetime())}
-                self.chatgpt_messages[buddy].append({"role": "user", "content": msg})
+            # check tokens
+            #self.logger.debug(f"Number of Tokens calculated: {self.num_tokens_from_messages(buddy)}")
+            self.delete_messages(buddy)
+            self.chatgpt_messages[buddy][0] = {"role": "system", "content": "The current data and time is:"+str(self.return_datetime())}
+            self.chatgpt_messages[buddy].append({"role": "user", "content": msg})
 
-           #     self.logger.error(f"Models:\n{openai.Model.list()}")  ## TODO make model user selectable in PluginConfig
+            #self.logger.error(f"Models:\n{openai.Model.list()}")  ## TODO make model user selectable in PluginConfig
 
-                response = openai.ChatCompletion.create(
-                    model="gpt-3.5-turbo-16k-0613",
-                    messages=self.chatgpt_messages[buddy]
-                )
+            response = openai.ChatCompletion.create(
+                model=self.chatgpt_models,
+                messages=self.chatgpt_messages[buddy]
+            )
 
-            else:
-                response = openai.Completion.create(
-                    model="text-davinci-003",
-                    prompt = self.systemcontent + "\n" + msg,
-                    max_tokens = 2000
-                )
-            if self.debugextra:
-                self.logger.debug(u'Acess_Token Used:' + self.chatgpt_access_token)
-                self.logger.debug(f"Response from chatGPT:{response}")
-            if not self.use_davinci:
-                self.tokens_used = response["usage"]["total_tokens"]
-                self.logger.debug(f"Buddy {buddy} has used Total Tokens {self.tokens_used}")
-                return response["choices"][0]["message"]["content"]
-            else:
-                return response["choices"][0]["text"]
+
+            self.tokens_used = response["usage"]["total_tokens"]
+            self.logger.debug(f"Buddy {buddy} has used Total Tokens {self.tokens_used}")
+            return response["choices"][0]["message"]["content"]
 
         except openai.error.Timeout as e:
             # Handle timeout error, e.g. retry or log
@@ -1315,6 +1303,38 @@ Your response should always be the JSON and no other text, regardless of categor
         except:
             self.logger.exception("Issue sending to chatGPT")
             return ""
+
+    def modellist_generator(self, filter="", values_dict=None, *args, **kwargs):
+        try:
+            if self.debugextra:
+                self.logger.debug("ModelList callback. ValuesDict:{}".format(values_dict))
+
+            default_list = [
+                ( "gpt-4", "Model GPT 4"), ("gpt-3.5-turbo","GPT 3 Turbo")  ]
+
+            new_list = []
+
+            openai.api_key = self.chatgpt_access_token
+            if openai.api_key == "":
+                self.logger.info("Using default Models as no key as yet")
+                return default_list
+
+            models_available = openai.Model.list()
+            if self.debugextra:
+                self.logger.debug(f"Model is type {models_available}")
+
+            for model in models_available["data"]:
+                new_list.append((model["id"], model["id"]))
+            return new_list
+
+        except openai.error.AuthenticationError as e:
+            # Handle authentication error, e.g. check credentials or log
+            self.logger.info(f"Not logged into ChatGPT as yet.  Using default")
+            return default_list
+
+        except:
+            self.logger.debug("Model list exception", exc_info=True)
+            return default_list
 
     def witai_dealwithreply(self, reply, buddy, original_message):
         if self.debugextra:
