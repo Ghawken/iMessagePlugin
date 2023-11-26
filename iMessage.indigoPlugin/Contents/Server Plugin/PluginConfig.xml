@@ -47,7 +47,7 @@
   </Field>
     <Field id="chatgpt_model" type="menu" defaultValue="gpt-3.5-turbo-16k" tooltip="Select ChatGPT Model to use (if available)" visibleBindingId="usechatgpt" visibleBindingValue="true">
         <Label>ChatGPT Model:</Label>
-       <List class="self" method="modellist_generator" dynamicReload="true"/>
+       <List class="self" method="modellist_generator"/>
     </Field>
 
     <Field id="chatgpt_alldevices" defaultValue="false" hidden="True" type="checkbox" tooltip="Enabling will send all devices to ChatGPT." visibleBindingId="usechatgpt" visibleBindingValue="true">
