@@ -8,7 +8,13 @@ First draft
 
 """
 import logging
-import_errors = []
+
+try:
+    import indigo
+except:
+    pass
+import logging
+
 import datetime
 import time as t
 import os
@@ -24,16 +30,15 @@ import threading
 import subprocess
 import platform
 
-try:
-    import openai
-    import openai.error
-except ImportError:
-    import_errors.append("aiohttp")
+
+import openai
+import openai.error
 
 import re
 import random
 import datetime
 import typedstream
+
 
 try:
     import indigo
@@ -1626,12 +1631,6 @@ Your response should always be the JSON and no other text, regardless of categor
         if self.debugextra:
             self.debugLog(u"Starting Plugin. startup() method called.")
 
-        if len(import_errors):
-            msg = f"Required Python libraries missing.  Run the following command(s) in a Terminal window to install them, then reload the plugin.\n\n"
-            for i in import_errors:
-                msg += f'pip3 install {i} -t "{self.pluginFolderPath}/Contents/Packages/"\n'
-            self.logger.error(msg)
-            return "Plugin startup cancelled due to missing Python libraries."
 
         self.logger.debug(f"Reflector Shortcut: {indigo.server.getReflectorURL()}/message/{self.pluginId}/chatGPT/sendchatGPT")
         self.generate(","",""")

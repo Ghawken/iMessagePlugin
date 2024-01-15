@@ -1,0 +1,3 @@
+requests >= 2.20  # to get the patch for CVE-2018-18074
+tqdm  # Needed for progress bars
+aiohttp  # Needed for async support
