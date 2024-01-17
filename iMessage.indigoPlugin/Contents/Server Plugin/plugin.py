@@ -591,9 +591,9 @@ Your response should always be the JSON and no other text, regardless of categor
             reply = my_ascript_from_string.run()
             if self.debugextra:
                 self.logger.debug(u'AppleScript Reply:'+str(reply))
-        except:
+        except Exception as e:
             self.logger.debug(f"An exception was caught with this applescript string {ascript_string}", exc_info=True)
-
+            self.logger.error(f"An Error occurred sending this message: Error: {e}")
 
     def as_sendgroupmessage(self, imsgUser, imsgMessage):  ## not used... revisit now with Big Sur
         if self.debugextra:
