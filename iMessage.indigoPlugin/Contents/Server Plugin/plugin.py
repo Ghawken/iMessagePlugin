@@ -54,6 +54,7 @@ class Plugin(indigo.PluginBase):
         self.username = str(os.getlogin())
         self.pathtoPlugin = os.getcwd()
         self.startingUp = True
+        self.connection = None
         self.systemVersion = int(platform.release()[:2])  ## take first two digits and make an int: 18-Mojave, 17 High ierra, 16 - Sierra
         self.pluginIsInitializing = True
         self.pluginIsShuttingDown = False
@@ -363,35 +364,30 @@ Your response should always be the JSON and no other text, regardless of categor
 
         try:
             self.connectsql()
-            #x =0
             while True:
-                #x=x+1
-                self.sleep(5)
+                try:
+                    self.sleep(4)
+                    messages = self.sql_fetchmessages()
+                    if len(messages)>0:
+                        self.parsemessages(messages)
+                    if len(self.awaitingConfirmation)>0:
+                        self.checkTimeout()
+                    if self.lastCommandsent:
+                        if t.time() > self.resetLastCommand:
+                            if self.debugextra:
+                                self.logger.debug(u'Within RunConcurrent Thread: Resetting self.lastcommandsent')
+                            self.lastCommandsent.clear()
+                            self.resetLastCommand = t.time()+120
+                            if self.debugextra:
+                                self.logger.debug(u'Now Self.lastcommandsent :'+str(self.lastCommandsent))
+                except self.StopThread:
+                    self.logger.info(f"Stopping plugin.")
+                    break
+                except:
+                    self.logger.debug(f"Exception caught in runConcurrent thread", exc_info=True)
+                    pass
 
-                messages = self.sql_fetchmessages()
-                if len(messages)>0:
-                    self.parsemessages(messages)
-                if len(self.awaitingConfirmation)>0:
-                    self.checkTimeout()
-                if self.lastCommandsent:
-                    if t.time() > self.resetLastCommand:
-                        if self.debugextra:
-                            self.logger.debug(u'Within RunConcurrent Thread: Resetting self.lastcommandsent')
-                        self.lastCommandsent.clear()
-                        self.resetLastCommand = t.time()+120
-                        if self.debugextra:
-                            self.logger.debug(u'Now Self.lastcommandsent :'+str(self.lastCommandsent))
-                # if self.updateFrequency > 0:
-                #     if t.time() > self.next_update_check:
-                #         try:
-                #             self.checkForUpdates()
-                #             self.next_update_check = t.time() + self.updateFrequency
-                #         except:
-                #             self.logger.debug(
-                #                 u'Error checking for update - ? No Internet connection.  Checking again in 24 hours')
-                #             self.next_update_check = self.next_update_check + 86400
-                #             if self.debugexceptions:
-                #                 self.logger.exception(u'and Caught Exception:')
+
         except self.StopThread:
             self.debugLog(u'Restarting/or error. Stopping  thread.')
             self.closesql()
@@ -403,20 +399,25 @@ Your response should always be the JSON and no other text, regardless of categor
         if self.debugextra:
             self.debugLog(u"connectsql() method called.")
         try:
-
             self.filename = os.path.expanduser('~/Library/Messages/chat.db')
             if self.debugextra:
                 self.logger.debug(u'ConnectSQL: Filename location for iMsg chat.db equals:'+str(self.filename))
             self.connection = sqlite3.connect(self.filename)
             self.logger.info(u'Connection to iMsg Database Successful.')
-        except:
+        except sqlite3.OperationalError as ex:
             self.logger.error(u'Problem connecting to iMessage database....')
             self.logger.error(u'Most likely you have not allowed IndigoApp and IndigoServer Full Disk Access')
             self.logger.error(u'Please see instructions.  This only needs to be done once.')
             self.logger.error(u'Once done please restart the plugin.')
-            if self.debugextra:
+            self.logger.error(f"Error Received: == {ex} ==")
+            self.logger.error(u'Shutting down plugin now.')
+            if self.debugexceptions:
                 self.logger.exception(u'and here is the Caught Exception (self.debugexceptions is on:)')
-            self.sleep(600)
+            self.stopPlugin()
+        except Exception as ex:
+            self.logger.error(u'Unknown Error connecting to iMessage database....')
+            self.logger.exception(f"Exception:")
+           # self.stopPlugin()
             return
 
     def closesql(self):
@@ -456,9 +457,15 @@ Your response should always be the JSON and no other text, regardless of categor
         return result
 
     def sql_fetchmessages(self):
-       # if self.debugextra:
-       #     self.debugLog(u"fetch messages() method called.")
-        cursor = self.connection.cursor()
+        try:
+            cursor = self.connection.cursor()
+        except AttributeError as ex:
+            self.logger.debug(f"Attribute error connecting to sqllite.  ?Not connected.  Error {ex}")
+            self.logger.info(f"Error connecting to Database, connection appears to not exist.  Attempting to reconnect")
+            self.connectsql()
+
+            return dict()
+
         using_attributedBody = False
         #below is needed for older than Mojave
         if self.systemVersion >=22:
