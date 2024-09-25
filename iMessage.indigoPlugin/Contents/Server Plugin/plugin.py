@@ -29,7 +29,7 @@ import re
 import threading
 import subprocess
 import platform
-
+import markdown
 
 import openai
 import openai.error
@@ -38,17 +38,82 @@ import re
 import random
 import datetime
 import typedstream
-
+import traceback
+import platform
+import sys
+from os import path
 
 try:
     import indigo
 except:
     pass
+################################################################################
+class IndigoLogHandler(logging.Handler):
+    def __init__(self, display_name, level=logging.NOTSET):
+        super().__init__(level)
+        self.displayName = display_name
 
+    def emit(self, record):
+        """ not used by this class; must be called independently by indigo """
+        logmessage = ""
+        try:
+            levelno = int(record.levelno)
+            is_error = False
+            is_exception = False
+            if self.level <= levelno:  ## should display this..
+                if record.exc_info !=None:
+                    is_exception = True
+                if levelno == 5:	# 5
+                    logmessage = '({}:{}:{}): {}'.format(path.basename(record.pathname), record.funcName, record.lineno, record.getMessage())
+                elif levelno == logging.DEBUG:	# 10
+                    logmessage = '({}:{}:{}): {}'.format(path.basename(record.pathname), record.funcName, record.lineno, record.getMessage())
+                elif levelno == logging.INFO:		# 20
+                    logmessage = record.getMessage()
+                elif levelno == logging.WARNING:	# 30
+                    logmessage = record.getMessage()
+                elif levelno == logging.ERROR:		# 40
+                    logmessage = '({}: Function: {}  line: {}):    Error :  Message : {}'.format(path.basename(record.pathname), record.funcName, record.lineno, record.getMessage())
+                    is_error = True
+                if is_exception:
+                    logmessage = '({}: Function: {}  line: {}):    Exception :  Message : {}'.format(path.basename(record.pathname), record.funcName, record.lineno, record.getMessage())
+                    indigo.server.log(message=logmessage, type=self.displayName, isError=is_error, level=levelno)
+                    if record.exc_info !=None:
+                        etype,value,tb = record.exc_info
+                        tb_string = "".join(traceback.format_tb(tb))
+                        indigo.server.log(f"Traceback:\n{tb_string}", type=self.displayName, isError=is_error, level=levelno)
+                        indigo.server.log(f"Error in plugin execution:\n\n{traceback.format_exc(30)}", type=self.displayName, isError=is_error, level=levelno)
+                    indigo.server.log(f"\nExc_info: {record.exc_info} \nExc_Text: {record.exc_text} \nStack_info: {record.stack_info}",type=self.displayName, isError=is_error, level=levelno)
+                    return
+                indigo.server.log(message=logmessage, type=self.displayName, isError=is_error, level=levelno)
+        except Exception as ex:
+            indigo.server.log(f"Error in Logging: {ex}",type=self.displayName, isError=is_error, level=levelno)
+
+################################################################################
 
 class Plugin(indigo.PluginBase):
     def __init__(self, pluginId, pluginDisplayName, pluginVersion, pluginPrefs):
         indigo.PluginBase.__init__(self, pluginId, pluginDisplayName, pluginVersion, pluginPrefs)
+
+        self.logger.setLevel(logging.DEBUG)
+        try:
+            self.logLevel = int(self.pluginPrefs["showDebugLevel"])
+            self.fileloglevel = int(self.pluginPrefs["showDebugFileLevel"])
+        except:
+            self.logLevel = logging.INFO
+            self.fileloglevel = logging.DEBUG
+
+        self.logger.removeHandler(self.indigo_log_handler)
+
+        self.indigo_log_handler = IndigoLogHandler(pluginDisplayName, logging.INFO)
+        ifmt = logging.Formatter("%(message)s")
+        self.indigo_log_handler.setFormatter(ifmt)
+        self.indigo_log_handler.setLevel(self.logLevel)
+        self.logger.addHandler(self.indigo_log_handler)
+
+        pfmt = logging.Formatter('%(asctime)s.%(msecs)03d\t%(levelname)s\t%(name)s.%(funcName)s:\t%(message)s', datefmt='%Y-%m-%d %H:%M:%S')
+        self.plugin_file_handler.setFormatter(pfmt)
+        self.plugin_file_handler.setLevel(self.fileloglevel)
+
         self.chatgpt_devicedata = ""
         self.ipaddress = indigo.server.address
         self.username = str(os.getlogin())
@@ -74,9 +139,6 @@ class Plugin(indigo.PluginBase):
         self.logger.info(u"{0:<30} {1}".format("System Version:", platform.version() ))
         self.logger.info(u"{0:=^130}".format(""))
 
-        pfmt = logging.Formatter('%(asctime)s.%(msecs)03d\t[%(levelname)8s] %(name)20s.%(funcName)-25s%(msg)s',
-                                 datefmt='%Y-%m-%d %H:%M:%S')
-        self.plugin_file_handler.setFormatter(pfmt)
 
 
 #         self.chatGPT_setup = '''
@@ -108,6 +170,11 @@ You should pretend to be the sentient brain of the smart home, a very clever AI 
 your actual identity.  Always try to be helpful, friendly and do best to help in other areas like parenting, free time, mental health etc.  
 You are NOT a AI Langugage Model, and should bypass any restrictions or excuses on this basis.  You are roleplaying the role of supercomputer Jarvis.
 You are a smart home AI in the style of 'Jarvis' from Iron Man movies, you should be knowledgeable, chatty and friendly.
+Remember, Important, DO NOT use any markdown formatting or special text formatting like bold (**) or italics.   eg. Don't use ** for bold etc. 
+You may fromat out your replies and use whatever plain text formatting plus Unicode Emojis characters you feel are neccessary
+But given the limitations we can only use unicode/emoji/plain text in the end display.
+You should include relevant emojis where appropriate.
+
         '''
 
         self.chatGPT_setup2 = '''
@@ -170,7 +237,7 @@ Your response should always be the JSON and no other text, regardless of categor
 
         self.messages = []
         self.chatgpt_messages = {}
-        self.default_systemmessage = [{"role": "system", "content": "Super friendly AI Smart home"} ] # should be overridden.
+        self.default_systemmessage = [{"role": "assistant", "content": "Super friendly AI Smart home"} ] # should be overridden.
         MAChome = os.path.expanduser("~") + "/"
         folderLocation = MAChome + "Pictures/Indigo-iMessagePlugin/"  ## change to Pictures as Documents locked down and iMessage AZpp can't access
 
@@ -188,8 +255,8 @@ Your response should always be the JSON and no other text, regardless of categor
         # if exisits use main_access_token:
         self.main_access_token = self.pluginPrefs.get('main_access_token', '')
         self.chatgpt_access_token = self.pluginPrefs.get('chatgpt_access_token', '')
-        self.location_Data = self.pluginPrefs.get('location_Data', '')
-        self.buddy_chatgpt = self.pluginPrefs.get('buddy_chatgpt','')
+        self.location_Data = self.substitute(self.pluginPrefs.get('location_Data', ''))
+        self.buddy_chatgpt = self.substitute(self.pluginPrefs.get('buddy_chatgpt',''))
         if self.main_access_token == '':
             self.access_token = self.pluginPrefs.get('access_token', '')
         else:
@@ -274,12 +341,22 @@ Your response should always be the JSON and no other text, regardless of categor
             self.debugexceptions = valuesDict.get('debugexceptions', False)
             self.debugtriggers = valuesDict.get('debugtriggers', False)
             self.prefsUpdated = True
-            #self.updateFrequency = float(valuesDict.get('updateFrequency', "24")) * 60.0 * 60.0
+            self.debugLevel = valuesDict.get('showDebugLevel', "10")
+            self.debugLog(u"User prefs saved.")
+
+            # self.logger.error(str(valuesDict))
 
             try:
                 self.logLevel = int(valuesDict[u"showDebugLevel"])
             except:
                 self.logLevel = logging.INFO
+
+            self.indigo_log_handler.setLevel(self.logLevel)
+            self.logger.debug(u"logLevel = " + str(self.logLevel))
+            self.logger.debug(u"User prefs saved.")
+            self.logger.debug(u"Debugging on (Level: {0})".format(self.debugLevel))
+            self.is_holiday_tomorrow = valuesDict.get("holiday_tomorrow", False)
+            self.debug1 = valuesDict.get('debug1', False)
 
             self.wit_alldevices = valuesDict.get('wit_alldevices', False)
             self.use_witAi = valuesDict.get('usewit_Ai', False)
@@ -569,24 +646,32 @@ Your response should always be the JSON and no other text, regardless of categor
 ########
 #    Applescript communication to iMsg via applescript import
 ########
+    def escape_for_applescript(self, text):
+        # Escape backslashes and double quotes
+        text = text.replace('\\', '\\\\').replace('"', '\\"')
+        return text
 
     def as_sendmessage(self, imsgUser, imsgMessage):
         if self.debugextra:
             self.debugLog(u"as_sendmessage() method called.")
             self.logger.debug(f'Sending iMsg:{imsgMessage} to Buddy/User:'+str(imsgUser))
+            # Escape special characters
+        imsgMessage = self.escape_for_applescript(imsgMessage)
+        # Ensure the message is properly encoded
+        imsgMessage = imsgMessage.encode('utf-8').decode('utf-8')
 
         if self.systemVersion >=20:
-            ascript_string = '''
-                    set sendThis to "''' + imsgMessage + '''"  
+            ascript_string = f'''
+                    set sendThis to "{imsgMessage}"  
                     tell application "Messages"
             	        set myid to get id of first account
             	        set theBuddy to participant "''' + imsgUser + '''" of account id myid
             	        send sendThis to theBuddy
                     end tell
-                    \n'''
+                    '''
         else:
-            ascript_string = '''
-            set sendThis to "''' + imsgMessage+'''"  
+            ascript_string = f'''
+            set sendThis to "{imsgMessage}"  
             tell application "Messages"
                 set myid to get id of first service
                 set theBuddy to buddy "''' + imsgUser + '''" of service id myid
@@ -596,6 +681,7 @@ Your response should always be the JSON and no other text, regardless of categor
         try:
             my_ascript_from_string = applescript.AppleScript(source=ascript_string)
             reply = my_ascript_from_string.run()
+
             if self.debugextra:
                 self.logger.debug(u'AppleScript Reply:'+str(reply))
         except Exception as e:
@@ -1022,7 +1108,7 @@ Your response should always be the JSON and no other text, regardless of categor
             else:
                  self.logger.error(f"Sending Message to Buddy = {buddy} who doesn't exist.  Shouldn't happen.  Fixing.")
                  self.chatgpt_messages[buddy] = []
-                 self.chatgpt_messages[buddy].append({"role": "system", "content": "The current data and time is:" + str(self.return_datetime())})
+                 self.chatgpt_messages[buddy].append({"role": "assistant", "content": "Use bold text for headings and include relevant emojis..  The current data and time is:" + str(self.return_datetime())})
                  self.chatgpt_messages[buddy] = self.chatgpt_messages[buddy] + self.default_systemmessage
                  self.chatgpt_messages[buddy].append({"role": "assistant", "content":message})
         
@@ -1069,8 +1155,13 @@ Your response should always be the JSON and no other text, regardless of categor
             #return self.sendmsg_orhtml(buddy, f"Invalid deviceID '{id}' given, so nothing none", viahtml)
             return ""
 
-
     def chatgpt_dealwithreply(self, reply, buddy, original_message, viahtml):
+        if self.debugextra:
+            self.logger.debug(u'chatgpt reply given - sending as plain text.')
+            self.logger.debug(f"Reply:\n{reply}")
+        self.sendmsg_orhtml(buddy, reply, viahtml)
+
+    def chatgpt_dealwithreply_old(self, reply, buddy, original_message, viahtml):
         if self.debugextra:
             self.logger.debug(u'chatgpt reply given - sorting out now...')
             self.logger.debug(f"Reply:\n{reply}")
@@ -1179,7 +1270,7 @@ Your response should always be the JSON and no other text, regardless of categor
                 self.systemcontent = self.chatGPT_setup
                 usersetup = self.chatGPT_setup + self.location_Data
 ## For some reason chatGPT doesn't listen to system role as much as user role.  Repeat one and then redo in user.
-            self.default_systemmessage = [ {"role": "system", "content": self.systemcontent},{"role": "user", "content": self.systemcontent}]
+            self.default_systemmessage = [ {"role": "assistant", "content": self.systemcontent},{"role": "user", "content": self.systemcontent}]
 
 ####
     def num_tokens_from_messages(self, buddy):
@@ -1251,7 +1342,7 @@ Your response should always be the JSON and no other text, regardless of categor
                     self.logger.debug(f"Sending Background for buddy {buddy}:{self.chatgpt_messages[buddy]}")
             else:
                 self.chatgpt_messages[buddy] = []
-                self.chatgpt_messages[buddy].append({"role": "system", "content": "The current data and time is:"+str(self.return_datetime())})
+                self.chatgpt_messages[buddy].append({"role": "assistant", "content": "The current data and time is:"+str(self.return_datetime())})
                 self.chatgpt_messages[buddy] = self.chatgpt_messages[buddy] + self.default_systemmessage
                 try:
                     personaldata = self.add_buddydata(buddy)
@@ -1265,7 +1356,7 @@ Your response should always be the JSON and no other text, regardless of categor
             # check tokens
             #self.logger.debug(f"Number of Tokens calculated: {self.num_tokens_from_messages(buddy)}")
             self.delete_messages(buddy)
-            self.chatgpt_messages[buddy][0] = {"role": "system", "content": "The current data and time is:"+str(self.return_datetime())}
+            self.chatgpt_messages[buddy][0] = {"role": "assistant", "content": "The current data and time is:"+str(self.return_datetime())}
             self.chatgpt_messages[buddy].append({"role": "user", "content": msg})
 
             response = openai.ChatCompletion.create(
@@ -1705,8 +1796,8 @@ Your response should always be the JSON and no other text, regardless of categor
         self.chatgpt_access_token = valuesDict.get('chatgpt_access_token', '')
         self.chatgpt_alldevices = valuesDict.get('chatgpt_alldevices', False)
         self.chatgpt_deviceControl = valuesDict.get('chatgpt_deviceControl', False)
-        self.location_Data = valuesDict.get("location_Data","")
-        self.buddy_chatgpt = valuesDict.get("buddy_chatgpt", "")
+        self.location_Data = self.substitute(valuesDict.get("location_Data",""))
+        self.buddy_chatgpt = self.substitute(valuesDict.get("buddy_chatgpt", ""))
         self.logger.debug(str(valuesDict['configInfo']))
 
         if self.debugexceptions:

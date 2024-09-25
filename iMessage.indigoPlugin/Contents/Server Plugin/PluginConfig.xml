@@ -222,6 +222,8 @@
 
  <Field id="sep12139" type="separator"/>
 
+
+
   <Field id="space10" type="label" alignText="left">
     <Label>Debugging:</Label>
   </Field>
@@ -244,8 +246,11 @@
         <Label/>
         <Description>Debug Exceptions</Description>
     </Field>
+
+
+    <Field id="sep74a2e" type="separator"/>
     <Field id="showDebugLevel" type="menu" defaultValue="20" tooltip="Controls the amount of debug information written to the log.">
-        <Label>Debug level:</Label>
+        <Label>Indigo Log Debug level:</Label>
         <Description>Level of Debug information to show in Indigo</Description>
         <List>
             <Option value="5">Detailed Debugging Messages</Option>
@@ -255,8 +260,19 @@
             <Option value="40">Error Messages</Option>
             <Option value="50">Critical Errors Only</Option>
         </List>
-
-  </Field>
+    </Field>
+        <Field id="showDebugFileLevel" type="menu" defaultValue="5" tooltip="Controls the amount of debug information written to the log.">
+        <Label>File Debug level:</Label>
+        <Description>Level of Debug information saved to File</Description>
+        <List>
+            <Option value="5">Detailed Debugging Messages</Option>
+            <Option value="10">Debugging Messages</Option>
+            <Option value="20">Informational Messages</Option>
+            <Option value="30">Warning Messages</Option>
+            <Option value="40">Error Messages</Option>
+            <Option value="50">Critical Errors Only</Option>
+        </List>
+    </Field>
 
 
 </PluginConfig>
