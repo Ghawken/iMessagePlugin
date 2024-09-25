@@ -29,7 +29,7 @@ import re
 import threading
 import subprocess
 import platform
-import markdown
+#import markdown
 
 import openai
 import openai.error
