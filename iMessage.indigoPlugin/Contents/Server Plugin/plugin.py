@@ -1264,10 +1264,10 @@ Your response should always be the JSON and no other text, regardless of categor
         if self.use_chatGPT:
             self.chatgpt_devicedata = self.chatgpt_deviceData()
             if self.chatgpt_deviceControl:
-                self.systemcontent = self.chatGPT_setup
+                self.systemcontent = self.chatGPT_setup + self.location_Data
                 usersetup = self.chatGPT_setup + self.chatGPT_setup2 + self.location_Data +  "\n" + self.chatgpt_devicedata
             else:
-                self.systemcontent = self.chatGPT_setup
+                self.systemcontent = self.chatGPT_setup + self.location_Data
                 usersetup = self.chatGPT_setup + self.location_Data
 ## For some reason chatGPT doesn't listen to system role as much as user role.  Repeat one and then redo in user.
             self.default_systemmessage = [ {"role": "assistant", "content": self.systemcontent},{"role": "user", "content": self.systemcontent}]
