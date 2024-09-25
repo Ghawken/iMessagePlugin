@@ -1108,7 +1108,7 @@ Your response should always be the JSON and no other text, regardless of categor
             else:
                  self.logger.error(f"Sending Message to Buddy = {buddy} who doesn't exist.  Shouldn't happen.  Fixing.")
                  self.chatgpt_messages[buddy] = []
-                 self.chatgpt_messages[buddy].append({"role": "assistant", "content": "Use bold text for headings and include relevant emojis..  The current data and time is:" + str(self.return_datetime())})
+                 self.chatgpt_messages[buddy].append({"role": "assistant", "content": "The current data and time is:" + str(self.return_datetime())})
                  self.chatgpt_messages[buddy] = self.chatgpt_messages[buddy] + self.default_systemmessage
                  self.chatgpt_messages[buddy].append({"role": "assistant", "content":message})
         
@@ -1271,7 +1271,7 @@ Your response should always be the JSON and no other text, regardless of categor
                 usersetup = self.chatGPT_setup + self.location_Data
 ## For some reason chatGPT doesn't listen to system role as much as user role.  Repeat one and then redo in user.
             self.default_systemmessage = [ {"role": "assistant", "content": self.systemcontent},{"role": "user", "content": self.systemcontent}]
-
+            self.logger.debug(f"{self.default_systemmessage=}")
 ####
     def num_tokens_from_messages(self, buddy):
         """Returns the number of tokens used by a list of messages."""
